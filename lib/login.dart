@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:kash_plus/otp.dart';
+import 'package:kash_plus/registration.dart';
 
 class Login extends StatelessWidget {
   const Login({super.key});
@@ -32,7 +33,7 @@ class Login extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    "Welcome Back!",
+                    "SureCash!",
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -40,7 +41,7 @@ class Login extends StatelessWidget {
                     ),
                   ).animate().fade(duration: 500.ms),
                   const SizedBox(height: 20),
-                  _buildTextField(Icons.email, "Email"),
+                  _buildTextField(Icons.phone, "Phone"),
                   const SizedBox(height: 10),
                   _buildTextField(Icons.lock, "Password", obscureText: true),
                   const SizedBox(height: 20),
@@ -50,6 +51,9 @@ class Login extends StatelessWidget {
                     "Forgot Password?",
                     style: TextStyle(color: Colors.white70),
                   ).animate().fade(delay: 500.ms),
+                 TextButton(onPressed: (){
+                   Navigator.push(context, MaterialPageRoute(builder: (context)=>registration()));
+                 }, child: const Text("Register", style: TextStyle(color: Colors.white70),),)
                 ],
               ),
             ).animate().fadeIn(duration: 800.ms),
