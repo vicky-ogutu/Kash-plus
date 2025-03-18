@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:kash_plus/otp.dart';
 
 class Login extends StatelessWidget {
   const Login({super.key});
@@ -98,7 +99,9 @@ class Login extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
       ),
-      onPressed: () {},
+      onPressed: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context)=>const Otp()));
+      },
       child: const Text(
         "Login",
         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
