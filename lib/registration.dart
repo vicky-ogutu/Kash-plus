@@ -33,27 +33,38 @@ class registration extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    "SureCash!",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        "Create Account!",
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8), // Space between text and icon
+                      const Icon(
+                        Icons.thumb_up,
+                        color: Colors.white,
+                        size: 36,
+                      ),
+                    ],
                   ).animate().fade(duration: 500.ms),
                   const SizedBox(height: 20),
                   _buildTextField(Icons.person, "First name"),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   _buildTextField(Icons.person, "Last name"),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   _buildTextField(Icons.email, "Email"),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   _buildTextField(Icons.phone, "Phone"),
                   const SizedBox(height: 10),
                   _buildTextField(Icons.numbers, "ID number"),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   _buildTextField(Icons.lock, "Password", obscureText: true),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   _buildLoginButton(context),
                   const SizedBox(height: 10),
                   TextButton(onPressed: (){
