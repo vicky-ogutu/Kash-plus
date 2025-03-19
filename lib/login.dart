@@ -97,7 +97,7 @@ class Login extends StatelessWidget {
   Widget _buildLoginButton(BuildContext context) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.blue[400],
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 50),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
@@ -108,7 +108,7 @@ class Login extends StatelessWidget {
       },
       child: const Text(
         "Login",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        style: TextStyle(fontSize: 24, color: Colors.white70, fontWeight: FontWeight.bold),
       ),
     ).animate().scale(delay: 300.ms);
   }
