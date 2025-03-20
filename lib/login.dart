@@ -4,6 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:kash_plus/otp.dart';
 import 'package:kash_plus/registration.dart';
 
+import 'homepage.dart';
+
 class Login extends StatelessWidget {
   const Login({super.key});
 
@@ -33,7 +35,7 @@ class Login extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    "SureCash!",
+                    "SureKash!",
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -104,7 +106,7 @@ class Login extends StatelessWidget {
         ),
       ),
       onPressed: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context)=>const Otp()));
+        Navigator.push(context, MaterialPageRoute(builder: (context)=>const Home()));
       },
       child: const Text(
         "Login",
