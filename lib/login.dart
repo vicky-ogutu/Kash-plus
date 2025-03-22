@@ -22,6 +22,7 @@ class _LoginState extends State<Login> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool isObscured = true; // Store visibility state here
 
   Future<void> _login() async {
     final String phone = _phoneController.text.trim();
@@ -69,6 +70,8 @@ class _LoginState extends State<Login> {
             ),
           ),
         );
+        _phoneController.text ="";
+        _passwordController.text="";
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Login Failed: ${response.body}")),
@@ -151,7 +154,7 @@ class _LoginState extends State<Login> {
                   const SizedBox(height: 20),
                   _buildTextField(Icons.phone, "Phone", _phoneController),
                   const SizedBox(height: 10),
-                  _buildTextField(Icons.lock, "Password", _passwordController, obscureText: true),
+                  _passwordTextField(Icons.lock, "Password", _passwordController, obscureText: true),
                   const SizedBox(height: 20),
                   _buildLoginButton(),
                   const SizedBox(height: 10),
@@ -219,4 +222,46 @@ class _LoginState extends State<Login> {
       ),
     );
   }
+
+  Widget _passwordTextField(
+      IconData icon, String hint, TextEditingController controller,
+      {bool obscureText = false}) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+       // bool isObscured = obscureText;
+
+        return TextField(
+          controller: controller,
+          obscureText: isObscured,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white.withOpacity(0.2),
+            hintText: hint,
+            hintStyle: const TextStyle(color: Colors.white70),
+            prefixIcon: Icon(icon, color: Colors.white),
+            suffixIcon: obscureText
+                ? IconButton(
+              icon: Icon(
+                isObscured ? Icons.visibility_off : Icons.visibility,
+                color: Colors.white70,
+              ),
+              onPressed: () {
+                setState(() {
+                  isObscured = !isObscured;
+
+                });
+              },
+            )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          style: const TextStyle(color: Colors.white),
+        );
+      },
+    );
+  }
+
 }

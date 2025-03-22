@@ -37,7 +37,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
             const SizedBox(height: 10),
             _buildLoanDetailsCard(),
             const SizedBox(height: 10),
-            _buildLoanRequestCard(),
+           // _buildLoanRequestCard(),
           ],
         ),
       ),
@@ -45,7 +45,9 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 
   Widget _buildCurrentLoanCard() {
-    return Card(
+    return SizedBox(
+        width: double.infinity, // Ensures the card takes full screen width
+    child: Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -60,7 +62,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Ksh ${widget.loanAmount}",
+             // "Ksh ${widget.loanAmount}",
+              "Ksh ${widget.repayableAmount}",
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
               textAlign: TextAlign.center,
             ),
@@ -72,6 +75,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 
@@ -86,9 +90,9 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           children: [
             const Text("Loan Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            _buildDetailRow("Repayable Amount:", "Ksh ${widget.repayableAmount}"),
-            _buildDetailRow("Loan Status:", widget.loanStatus ?? "Not Available"),
-            _buildDetailRow("Approval Status:", widget.status),
+            _buildDetailRow("Amount Disbursed:", "Ksh ${widget.loanAmount}"),
+           // _buildDetailRow("Loan Status:", widget.loanStatus ?? "Not Available"),
+           // _buildDetailRow("Approval Status:", widget.status),
           ],
         ),
       ),
