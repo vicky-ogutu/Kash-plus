@@ -50,8 +50,25 @@ class _LoginState extends State<Login> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Login Successful! Welcome, ${data['name']}")),
         );
+        // Extracting values
+        String token = data['token'];
+        String loanAmount = data['loan_amount'];
+        String repayableAmount = data['repayable_amount'];
+        String status = data['status'];
+        String? loanStatus = data['loan_status']; // Can be null
         // Navigate to next screen after successful login
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const LoanApp()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LoanRequestScreen(
+              token: token,
+              loanAmount: loanAmount,
+              repayableAmount: repayableAmount,
+              status: status,
+              loanStatus: loanStatus,
+            ),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Login Failed: ${response.body}")),
@@ -101,7 +118,7 @@ class _LoginState extends State<Login> {
                           style: TextStyle(
                             fontSize: 30,
                             fontWeight: FontWeight.bold,
-                            color: Colors.blue[200], // S in blue
+                            color: Colors.blue[300], // S in blue
                           ),
                         ),
                         TextSpan(
@@ -121,7 +138,7 @@ class _LoginState extends State<Login> {
                           ),
                         ),
                         TextSpan(
-                          text: "ash!",
+                          text: "ash",
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -141,7 +158,7 @@ class _LoginState extends State<Login> {
                   const Text("Forgot Password?", style: TextStyle(color: Colors.white70)),
                   TextButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => LoanApp()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => registration()));
                     },
                     child: const Text("Register", style: TextStyle(color: Colors.white70)),
                   ),
