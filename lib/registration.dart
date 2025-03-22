@@ -36,8 +36,8 @@ class _RegistrationState extends State<Registration> {
       "phone": phoneController.text,
       "id_number": idNumberController.text,
       "password": passwordController.text,
-      "contact_person_name":contact_person_nameController,
-      "contact_person_phone_no": contact_person_phone_noController
+      "contact_person_name":contact_person_nameController.text,
+      "contact_person_phone_no": contact_person_phone_noController.text
     };
 
     try {
@@ -110,6 +110,7 @@ class _RegistrationState extends State<Registration> {
         children: [
           _buildBackground(),
           Center(
+            child: SingleChildScrollView(
             child: Container(
               padding: const EdgeInsets.all(24),
               margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -147,11 +148,16 @@ class _RegistrationState extends State<Registration> {
                   const SizedBox(height: 10),
                   _buildTextField(icon: Icons.numbers, hint: "ID number", controller: idNumberController),
                   const SizedBox(height: 10),
+                  _buildTextField(icon: Icons.person, hint: "Contact person name", controller: contact_person_nameController),
+                  const SizedBox(height: 10),
+                  _buildTextField(icon: Icons.phone, hint: "Contact person number", controller: contact_person_phone_noController),
+                  const SizedBox(height: 10),
                   _buildTextField(icon: Icons.lock, hint: "Password", controller: passwordController, obscureText: true),
                   const SizedBox(height: 10),
                   _buildRegisterButton(),
                 ],
               ),
+            ),
             ),
           ),
         ],
