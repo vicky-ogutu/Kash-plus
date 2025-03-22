@@ -40,6 +40,15 @@ class _RegistrationState extends State<Registration> {
       "contact_person_phone_no": contact_person_phone_noController.text
     };
 
+    if (firstNameController.text.isEmpty || lastNameController.text.isEmpty||
+    emailController.text.isEmpty || phoneController.text.isEmpty || idNumberController.text.isEmpty
+    || passwordController.text.isEmpty || contact_person_nameController.text.isEmpty || contact_person_phone_noController.text.isEmpty){
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all the details")),
+      );
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse(apiUrl),
