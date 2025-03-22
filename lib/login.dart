@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:kash_plus/homepage2.dart';
 import 'package:kash_plus/otp.dart';
 import 'package:kash_plus/registration.dart';
 
@@ -106,7 +107,7 @@ class Login extends StatelessWidget {
         ),
       ),
       onPressed: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context)=>const Home()));
+        Navigator.push(context, MaterialPageRoute(builder: (context)=>const LoanApp()));
       },
       child: const Text(
         "Login",
