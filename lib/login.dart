@@ -158,7 +158,7 @@ class _LoginState extends State<Login> {
                   const Text("Forgot Password?", style: TextStyle(color: Colors.white70)),
                   TextButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => registration()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context) => Registration()));
                     },
                     child: const Text("Register", style: TextStyle(color: Colors.white70)),
                   ),

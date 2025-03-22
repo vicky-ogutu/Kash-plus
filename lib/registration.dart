@@ -5,8 +5,103 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'login.dart';
 import 'otp.dart';
 
-class registration extends StatelessWidget {
-  const registration({super.key});
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class Registration extends StatefulWidget {
+  const Registration({super.key});
+
+  @override
+  _RegistrationState createState() => _RegistrationState();
+}
+
+class _RegistrationState extends State<Registration> {
+  final TextEditingController firstNameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController idNumberController = TextEditingController();
+  final TextEditingController contact_person_nameController = TextEditingController();
+  final TextEditingController contact_person_phone_noController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  Future<void> registerUser() async {
+    const String apiUrl = "http://api.rovictech.co.ke/api/auth/register"; // Replace with your endpoint
+
+    final Map<String, dynamic> requestData = {
+      "first_name": firstNameController.text,
+      "last_name": lastNameController.text,
+      "email": emailController.text,
+      "phone": phoneController.text,
+      "id_number": idNumberController.text,
+      "password": passwordController.text,
+      "contact_person_name":contact_person_nameController,
+      "contact_person_phone_no": contact_person_phone_noController
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode(requestData),
+      );
+
+      if (response.statusCode == 200) {
+        // Successful registration
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Registration successful")),
+        );
+        Navigator.push(context, MaterialPageRoute(builder: (context)=>Login()));
+      } else {
+        // Failed registration
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${response.body}")),
+        );
+      }
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Network error: $error")),
+      );
+    }
+  }
+
+  Widget _buildTextField(
+      {required IconData icon, required String hint, required TextEditingController controller, bool obscureText = false}) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.2),
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white70),
+        prefixIcon: Icon(icon, color: Colors.white),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      style: const TextStyle(color: Colors.white),
+    );
+  }
+
+  Widget _buildRegisterButton() {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blueAccent,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      onPressed: registerUser,
+      child: const Text(
+        "Register",
+        style: TextStyle(fontSize: 24, color: Colors.white70, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,46 +128,31 @@ class registration extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        "Create Account!",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 8), // Space between text and icon
-                      const Icon(
-                        Icons.thumb_up,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    ],
-                  ).animate().fade(duration: 500.ms),
+                  const Text(
+                    "Create Account!",
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 20),
-                  _buildTextField(Icons.person, "First name"),
+                  _buildTextField(icon: Icons.person, hint: "First name", controller: firstNameController),
                   const SizedBox(height: 10),
-                  _buildTextField(Icons.person, "Last name"),
+                  _buildTextField(icon: Icons.person, hint: "Last name", controller: lastNameController),
                   const SizedBox(height: 10),
-                  _buildTextField(Icons.email, "Email"),
+                  _buildTextField(icon: Icons.email, hint: "Email", controller: emailController),
                   const SizedBox(height: 10),
-                  _buildTextField(Icons.phone, "Phone"),
+                  _buildTextField(icon: Icons.phone, hint: "Phone", controller: phoneController),
                   const SizedBox(height: 10),
-                  _buildTextField(Icons.numbers, "ID number"),
+                  _buildTextField(icon: Icons.numbers, hint: "ID number", controller: idNumberController),
                   const SizedBox(height: 10),
-                  _buildTextField(Icons.lock, "Password", obscureText: true),
+                  _buildTextField(icon: Icons.lock, hint: "Password", controller: passwordController, obscureText: true),
                   const SizedBox(height: 10),
-                  _buildLoginButton(context),
-                  const SizedBox(height: 10),
-                  TextButton(onPressed: (){
-                    Navigator.push(context, MaterialPageRoute(builder: (context)=>Login()));
-                  }, child: const Text("Login", style: TextStyle(color: Colors.white70),),)
+                  _buildRegisterButton(),
                 ],
               ),
-            ).animate().fadeIn(duration: 800.ms),
+            ),
           ),
         ],
       ),
@@ -89,45 +169,5 @@ class registration extends StatelessWidget {
         ),
       ),
     );
-  }
-
-
-
-  Widget _buildTextField(IconData icon, String hint,
-      {bool obscureText = false}) {
-    return TextField(
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.2),
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white70),
-        prefixIcon: Icon(icon, color: Colors.white),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      style: const TextStyle(color: Colors.white),
-    );
-  }
-
-  Widget _buildLoginButton(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blueAccent,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-      onPressed: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context)=>const Otp()));
-      },
-      child: const Text(
-        "Register",
-        style: TextStyle(fontSize: 24, color: Colors.white70, fontWeight: FontWeight.bold),
-      ),
-    ).animate().scale(delay: 300.ms);
   }
 }
