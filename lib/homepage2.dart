@@ -26,8 +26,12 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("SureKash"),
+        title: const Text(
+          "Loan Details",
+          style: TextStyle(color: Colors.white), // White text color
+        ),
         backgroundColor: Colors.blueAccent,
+       // iconTheme: const IconThemeData(color: Colors.white), // White back button/icon color
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -156,7 +160,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       builder: (context) {
         return AlertDialog(
           title: const Text("Pay Loan"),
-          content: const Text("You will be prompted to put your PIN!"),
+          content: const Text("You will be prompted to enter your Mpesa PIN!"),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),

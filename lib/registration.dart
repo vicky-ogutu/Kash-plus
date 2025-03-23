@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_contact_picker/flutter_native_contact_picker.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 
 import 'login.dart';
@@ -25,6 +27,22 @@ class _RegistrationState extends State<Registration> {
   final TextEditingController contact_person_nameController = TextEditingController();
   final TextEditingController contact_person_phone_noController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final FlutterContactPicker _contactPicker = FlutterContactPicker();
+
+  Future<void> pickContact() async {
+    try {
+      final Contact? contact = await _contactPicker.selectContact();
+
+      if (contact != null && contact.phoneNumbers != null && contact.phoneNumbers!.isNotEmpty) {
+        setState(() {
+          contact_person_phone_noController.text = contact.phoneNumbers!.first;
+        });
+      }
+    } catch (e) {
+      print("Error picking contact: $e");
+    }
+  }
+
 
   Future<void> registerUser() async {
     const String apiUrl = "http://api.rovictech.co.ke/api/auth/register"; // Replace with your endpoint
@@ -159,7 +177,8 @@ class _RegistrationState extends State<Registration> {
                   const SizedBox(height: 10),
                   _buildTextField(icon: Icons.person, hint: "Contact person name", controller: contact_person_nameController),
                   const SizedBox(height: 10),
-                  _buildTextField(icon: Icons.phone, hint: "Contact person number", controller: contact_person_phone_noController),
+                  //_buildTextField(icon: Icons.phone, hint: "Contact person number", controller: contact_person_phone_noController),
+                  _buildPhoneTextField(),
                   const SizedBox(height: 10),
                   _buildTextField(icon: Icons.lock, hint: "Password", controller: passwordController, obscureText: true),
                   const SizedBox(height: 10),
@@ -185,4 +204,29 @@ class _RegistrationState extends State<Registration> {
       ),
     );
   }
+
+
+  Widget _buildPhoneTextField() {
+    return TextField(
+      controller: contact_person_phone_noController,
+      readOnly: true, // Prevent manual input
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.2),
+        hintText: "Contact number",
+        hintStyle: const TextStyle(color: Colors.white70),
+        prefixIcon: Icon(Icons.phone, color: Colors.white),
+        suffixIcon: IconButton(
+          icon: Icon(Icons.contacts, color: Colors.white),
+          onPressed: pickContact, // Open phonebook on press
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      style: const TextStyle(color: Colors.white),
+    );
+  }
+
 }
