@@ -94,30 +94,33 @@ class _RegistrationState extends State<Registration> {
   }
 
   Widget _buildTextField(
-      {required IconData icon, required String hint, required TextEditingController controller, bool obscureText = false}) {
+      { required String hint, required TextEditingController controller, bool obscureText = false}) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.white.withOpacity(0.2),
+        fillColor: Colors.white,
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white70),
-        prefixIcon: Icon(icon, color: Colors.white),
+        hintStyle: const TextStyle(color: Colors.black),
+       // prefixIcon: Icon(icon, color: Colors.white),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+          //borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: Colors.grey, width: 1.0), // visible border
         ),
       ),
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.black),
     );
   }
 
   Widget _buildRegisterButton() {
-    return ElevatedButton(
+    return SizedBox(
+        width: double.infinity, // makes the button stretch to full width of parent
+    child: ElevatedButton(
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.blueAccent,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 50),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10),
         ),
@@ -125,8 +128,8 @@ class _RegistrationState extends State<Registration> {
       onPressed: registerUser,
       child: const Text(
         "Register",
-        style: TextStyle(fontSize: 24, color: Colors.white70, fontWeight: FontWeight.bold),
-      ),
+        style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+      ),),
     );
   }
 
@@ -156,35 +159,90 @@ class _RegistrationState extends State<Registration> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  //  RichText(
+                  //   text: TextSpan(
+                  //     children: [
+                  //       TextSpan(
+                  //         text: "C",
+                  //         style: TextStyle(
+                  //           fontSize: 30,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.blue[300], // S in blue
+                  //         ),
+                  //       ),
+                  //       TextSpan(
+                  //         text: "reate",
+                  //         style: TextStyle(
+                  //           fontSize: 24,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.black, // Rest in white
+                  //         ),
+                  //       ),
+                  //       TextSpan(
+                  //         text: "A",
+                  //         style: TextStyle(
+                  //           fontSize: 30,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.blue[300], // K in blue
+                  //         ),
+                  //       ),
+                  //       TextSpan(
+                  //         text: "ccount",
+                  //         style: TextStyle(
+                  //           fontSize: 24,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.black, // Rest in white
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
                   const Text(
                     "Create Account!",
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 20),
-                  _buildTextField(icon: Icons.person, hint: "First name", controller: firstNameController),
+
+                  // First & Last Name in a Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          hint: "First name",
+                          controller: firstNameController,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _buildTextField(
+                          hint: "Last name",
+                          controller: lastNameController,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
-                  _buildTextField(icon: Icons.person, hint: "Last name", controller: lastNameController),
+
+                  _buildTextField(hint: "Email", controller: emailController),
                   const SizedBox(height: 10),
-                  _buildTextField(icon: Icons.email, hint: "Email", controller: emailController),
+                  _buildTextField(hint: "Phone", controller: phoneController),
                   const SizedBox(height: 10),
-                  _buildTextField(icon: Icons.phone, hint: "Phone", controller: phoneController),
+                  _buildTextField(hint: "ID number", controller: idNumberController),
                   const SizedBox(height: 10),
-                  _buildTextField(icon: Icons.numbers, hint: "ID number", controller: idNumberController),
+                  _buildTextField(hint: "Contact person name", controller: contact_person_nameController),
                   const SizedBox(height: 10),
-                  _buildTextField(icon: Icons.person, hint: "Contact person name", controller: contact_person_nameController),
+                  _buildPhoneTextField(), // Contact number with picker
                   const SizedBox(height: 10),
-                  //_buildTextField(icon: Icons.phone, hint: "Contact person number", controller: contact_person_phone_noController),
-                  _buildPhoneTextField(),
-                  const SizedBox(height: 10),
-                  _buildTextField(icon: Icons.lock, hint: "Password", controller: passwordController, obscureText: true),
-                  const SizedBox(height: 10),
+                  _buildTextField( hint: "Password", controller: passwordController, obscureText: true),
+                  const SizedBox(height: 20),
                   _buildRegisterButton(),
                 ],
               ),
+
             ),
             ),
           ),
@@ -195,38 +253,44 @@ class _RegistrationState extends State<Registration> {
 
   Widget _buildBackground() {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      color: Colors.white,
+      // decoration: const BoxDecoration(
+      //   gradient: LinearGradient(
+      //    // colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+      //     colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+      //     begin: Alignment.topLeft,
+      //     end: Alignment.bottomRight,
+      //   ),
+      // ),
     );
   }
 
 
   Widget _buildPhoneTextField() {
-    return TextField(
-      controller: contact_person_phone_noController,
-      readOnly: true, // Prevent manual input
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.2),
-        hintText: "Contact number",
-        hintStyle: const TextStyle(color: Colors.white70),
-        prefixIcon: Icon(Icons.phone, color: Colors.white),
-        suffixIcon: IconButton(
-          icon: Icon(Icons.contacts, color: Colors.white),
-          onPressed: pickContact, // Open phonebook on press
-        ),
-        border: OutlineInputBorder(
+    return GestureDetector(
+      onTap: pickContact,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        alignment: Alignment.centerLeft,
+        height: 60,
+        child: Text(
+          contact_person_phone_noController.text.isEmpty
+              ? "Contact number"
+              : contact_person_phone_noController.text,
+          style: TextStyle(
+            color: contact_person_phone_noController.text.isEmpty
+                ? Colors.black
+                : Colors.black,
+            fontSize: 16,
+          ),
         ),
       ),
-      style: const TextStyle(color: Colors.white),
     );
   }
+
 
 }

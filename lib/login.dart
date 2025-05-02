@@ -94,7 +94,9 @@ class _LoginState extends State<Login> {
       body: Stack(
         children: [
           _buildBackground(),
-          Center(
+    SafeArea(
+    child: SingleChildScrollView(
+          child: Center(
             child: Container(
               padding: const EdgeInsets.all(24),
               margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -104,7 +106,7 @@ class _LoginState extends State<Login> {
                 border: Border.all(color: Colors.white.withOpacity(0.2)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.white.withOpacity(0.2),
                     blurRadius: 10,
                     spreadRadius: 2,
                   ),
@@ -113,62 +115,64 @@ class _LoginState extends State<Login> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                   RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: "S",
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[300], // S in blue
-                          ),
-                        ),
-                        TextSpan(
-                          text: "ure",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white, // Rest in white
-                          ),
-                        ),
-                        TextSpan(
-                          text: "C",
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[300], // K in blue
-                          ),
-                        ),
-                        TextSpan(
-                          text: "ash",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white, // Rest in white
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildTextField(Icons.phone, "Phone", _phoneController),
+                  //  RichText(
+                  //   text: TextSpan(
+                  //     children: [
+                  //       TextSpan(
+                  //         text: "S",
+                  //         style: TextStyle(
+                  //           fontSize: 30,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.blue[300], // S in blue
+                  //         ),
+                  //       ),
+                  //       TextSpan(
+                  //         text: "ure",
+                  //         style: TextStyle(
+                  //           fontSize: 24,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.white, // Rest in white
+                  //         ),
+                  //       ),
+                  //       TextSpan(
+                  //         text: "C",
+                  //         style: TextStyle(
+                  //           fontSize: 30,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.blue[300], // K in blue
+                  //         ),
+                  //       ),
+                  //       TextSpan(
+                  //         text: "ash",
+                  //         style: TextStyle(
+                  //           fontSize: 24,
+                  //           fontWeight: FontWeight.bold,
+                  //           color: Colors.white, // Rest in white
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  Image.asset('assets/images/app_logo.png'),
+                  const SizedBox(height: 15),
+                  _buildTextField(Icons.phone, "phone number", _phoneController),
                   const SizedBox(height: 10),
-                  _passwordTextField(Icons.lock, "Password", _passwordController, obscureText: true),
+                  _passwordTextField(Icons.lock, "password", _passwordController, obscureText: true),
                   const SizedBox(height: 20),
                   _buildLoginButton(),
                   const SizedBox(height: 10),
-                  const Text("Forgot Password?", style: TextStyle(color: Colors.white70)),
+                  const Text("Forgot Password?", style: TextStyle(color: Colors.black)),
                   TextButton(
                     onPressed: () {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => Registration()));
                     },
-                    child: const Text("Register", style: TextStyle(color: Colors.white70)),
+                    child: const Text("Register", style: TextStyle(color: Colors.black)),
                   ),
                 ],
               ),
             ),
           ),
+    ),),
         ],
       ),
     );
@@ -176,14 +180,15 @@ class _LoginState extends State<Login> {
 
   Widget _buildBackground() {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-         // colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-          colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      color: Colors.white,
+      // decoration: const BoxDecoration(
+      //   gradient: LinearGradient(
+      //    // colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+      //     colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+      //     begin: Alignment.topLeft,
+      //     end: Alignment.bottomRight,
+      //   ),
+      // ),
     );
   }
 
@@ -193,35 +198,40 @@ class _LoginState extends State<Login> {
       obscureText: obscureText,
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.white.withOpacity(0.2),
+        fillColor: Colors.white,
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white70),
-        prefixIcon: Icon(icon, color: Colors.white),
+        hintStyle: const TextStyle(color: Colors.black),
+        prefixIcon: Icon(icon, color: Colors.black),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+         // borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: Colors.grey, width: 1.0), // visible border
         ),
       ),
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.black),
     );
   }
 
   Widget _buildLoginButton() {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.blue[400],
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      onPressed: _isLoading ? null : _login,
-      child: _isLoading
-          ? const CircularProgressIndicator(color: Colors.white)
-          : const Text(
-        "Login",
-        style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+    return SizedBox(
+      width: double.infinity, // makes the button stretch to full width of parent
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue[400],
+          padding: const EdgeInsets.symmetric(vertical: 10), // removed horizontal padding
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        onPressed: _isLoading ? null : _login,
+        child: _isLoading
+            ? const CircularProgressIndicator(color: Colors.black)
+            : const Text(
+          "Login",
+          style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
+
 
   Widget _passwordTextField(
       IconData icon, String hint, TextEditingController controller,
@@ -235,15 +245,15 @@ class _LoginState extends State<Login> {
           obscureText: isObscured,
           decoration: InputDecoration(
             filled: true,
-            fillColor: Colors.white.withOpacity(0.2),
+            fillColor: Colors.white,
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white70),
-            prefixIcon: Icon(icon, color: Colors.white),
+            hintStyle: const TextStyle(color: Colors.black),
+            prefixIcon: Icon(icon, color: Colors.black),
             suffixIcon: obscureText
                 ? IconButton(
               icon: Icon(
                 isObscured ? Icons.visibility_off : Icons.visibility,
-                color: Colors.white70,
+                color: Colors.black,
               ),
               onPressed: () {
                 setState(() {
@@ -255,10 +265,11 @@ class _LoginState extends State<Login> {
                 : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide.none,
+              //borderSide: BorderSide.none,
+              borderSide: const BorderSide(color: Colors.grey, width: 1.0), // visible border
             ),
           ),
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Colors.black),
         );
       },
     );

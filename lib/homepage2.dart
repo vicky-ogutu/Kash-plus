@@ -39,6 +39,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           children: [
             _buildCurrentLoanCard(),
             const SizedBox(height: 10),
+
+
             _buildLoanDetailsCard(),
             const SizedBox(height: 10),
            // _buildLoanRequestCard(),
@@ -65,6 +67,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
+
             Text(
              // "Ksh ${widget.loanAmount}",
               "Ksh ${widget.repayableAmount}",
