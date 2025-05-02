@@ -144,18 +144,18 @@ class _RegistrationState extends State<Registration> {
             child: Container(
               padding: const EdgeInsets.all(24),
               margin: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
+              // decoration: BoxDecoration(
+              //   color: Colors.white.withOpacity(0.1),
+              //   borderRadius: BorderRadius.circular(20),
+              //   border: Border.all(color: Colors.white.withOpacity(0.2)),
+              //   boxShadow: [
+              //     BoxShadow(
+              //       color: Colors.white.withOpacity(0.2),
+              //       blurRadius: 10,
+              //       spreadRadius: 2,
+              //     ),
+              //   ],
+              // ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

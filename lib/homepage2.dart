@@ -43,6 +43,75 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
             _buildLoanDetailsCard(),
             const SizedBox(height: 10),
+
+            Card(
+              elevation: 4, // Adds shadow
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12), // Rounded corners
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // Ensures the Card takes only necessary space
+                  children: [
+                    const Text(
+                      "Ksh 30000",
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                    ),
+                    const SizedBox(height: 20),
+
+
+
+
+
+                    const Text(
+                      "Select Loan Amount",
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Loan amount display
+                    Text(
+                      "Ksh ${_loanAmount.toInt()}",
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Horizontal Scrollable Loan Slider
+                    Slider(
+                      value: _loanAmount,
+                      min: 1000,
+                      max: 30000,
+                      divisions: 29, // Each step is 1000
+                      label: "Ksh ${_loanAmount.toInt()}",
+                      activeColor: Colors.blue,
+                      inactiveColor: Colors.grey[300],
+                      onChanged: (value) {
+                        setState(() {
+                          _loanAmount = value;
+                        });
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Request Loan Button
+                    ElevatedButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Loan Request for Ksh ${_loanAmount.toInt()} submitted!")),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                      ),
+                      child: const Text("Request Loan", style: TextStyle(fontSize: 18)),
+                    ),
+                  ],
+                ),
+              ),
+            )
            // _buildLoanRequestCard(),
           ],
         ),
