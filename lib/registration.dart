@@ -273,6 +273,10 @@ class _RegistrationState extends State<Registration> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
+          border: Border.all( // <-- Add this border
+            color: Colors.black, // Change to Colors.blue or any color you like
+            width: 1.0,
+          ),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         alignment: Alignment.centerLeft,
