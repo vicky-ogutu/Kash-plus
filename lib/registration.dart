@@ -45,22 +45,22 @@ class _RegistrationState extends State<Registration> {
 
 
   Future<void> registerUser() async {
-    const String apiUrl = "http://api.rovictech.co.ke/api/auth/register"; // Replace with your endpoint
+    const String apiUrl = "https://api.surekash.co.ke/api/auth/register";
 
     final Map<String, dynamic> requestData = {
       "first_name": firstNameController.text,
       "last_name": lastNameController.text,
       "email": emailController.text,
       "phone": phoneController.text,
-      "id_number": idNumberController.text,
       "password": passwordController.text,
-      "contact_person_name":contact_person_nameController.text,
-      "contact_person_phone_no": contact_person_phone_noController.text
+      "national_id": idNumberController.text,
+      //"contact_person_name":contact_person_nameController.text,
+     // "contact_person_phone_no": contact_person_phone_noController.text
     };
 
     if (firstNameController.text.isEmpty || lastNameController.text.isEmpty||
     emailController.text.isEmpty || phoneController.text.isEmpty || idNumberController.text.isEmpty
-    || passwordController.text.isEmpty || contact_person_nameController.text.isEmpty || contact_person_phone_noController.text.isEmpty){
+    || passwordController.text.isEmpty){
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill all the details")),
       );
@@ -144,59 +144,9 @@ class _RegistrationState extends State<Registration> {
             child: Container(
               padding: const EdgeInsets.all(24),
               margin: const EdgeInsets.symmetric(horizontal: 24),
-              // decoration: BoxDecoration(
-              //   color: Colors.white.withOpacity(0.1),
-              //   borderRadius: BorderRadius.circular(20),
-              //   border: Border.all(color: Colors.white.withOpacity(0.2)),
-              //   boxShadow: [
-              //     BoxShadow(
-              //       color: Colors.white.withOpacity(0.2),
-              //       blurRadius: 10,
-              //       spreadRadius: 2,
-              //     ),
-              //   ],
-              // ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  //  RichText(
-                  //   text: TextSpan(
-                  //     children: [
-                  //       TextSpan(
-                  //         text: "C",
-                  //         style: TextStyle(
-                  //           fontSize: 30,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Colors.blue[300], // S in blue
-                  //         ),
-                  //       ),
-                  //       TextSpan(
-                  //         text: "reate",
-                  //         style: TextStyle(
-                  //           fontSize: 24,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Colors.black, // Rest in white
-                  //         ),
-                  //       ),
-                  //       TextSpan(
-                  //         text: "A",
-                  //         style: TextStyle(
-                  //           fontSize: 30,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Colors.blue[300], // K in blue
-                  //         ),
-                  //       ),
-                  //       TextSpan(
-                  //         text: "ccount",
-                  //         style: TextStyle(
-                  //           fontSize: 24,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Colors.black, // Rest in white
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
                   const Text(
                     "Create Account!",
                     style: TextStyle(
@@ -233,10 +183,10 @@ class _RegistrationState extends State<Registration> {
                   const SizedBox(height: 10),
                   _buildTextField(hint: "ID number", controller: idNumberController),
                   const SizedBox(height: 10),
-                  _buildTextField(hint: "Contact person name", controller: contact_person_nameController),
-                  const SizedBox(height: 10),
-                  _buildPhoneTextField(), // Contact number with picker
-                  const SizedBox(height: 10),
+                  // _buildTextField(hint: "Contact person name", controller: contact_person_nameController),
+                  // const SizedBox(height: 10),
+                  // _buildPhoneTextField(), // Contact number with picker
+                  // const SizedBox(height: 10),
                   _buildTextField( hint: "Password", controller: passwordController, obscureText: true),
                   const SizedBox(height: 20),
                   _buildRegisterButton(),

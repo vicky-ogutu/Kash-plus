@@ -1,92 +1,28 @@
 import 'dart:convert';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:kash_plus/homepage2.dart';
-import 'package:kash_plus/otp.dart';
-import 'package:kash_plus/registration.dart';
-
-import 'homepage.dart';
 import 'package:http/http.dart' as http;
-
+import 'homepage2.dart';
+import 'registration.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
 
   @override
-  _LoginState createState() => _LoginState();
+  State<Login> createState() => _LoginState();
 }
 
 class _LoginState extends State<Login> {
+  // Controllers
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  // State variables
   bool _isLoading = false;
-  bool isObscured = true; // Store visibility state here
+  bool _isPasswordVisible = false;
 
-  Future<void> _login() async {
-    final String phone = _phoneController.text.trim();
-    final String password = _passwordController.text.trim();
-
-    if (phone.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter phone number and password")),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final response = await http.post(
-        Uri.parse("http://api.rovictech.co.ke/api/auth/login"), // Replace with your API URL
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"phone": phone, "password": password}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Login Successful! Welcome, ${data['name']}")),
-        );
-        // Extracting values
-        String token = data['token'];
-        String loanAmount = data['loan_amount'];
-        String repayableAmount = data['repayable_amount'];
-        String status = data['status'];
-        String? loanStatus = data['loan_status']; // Can be null
-        // Navigate to next screen after successful login
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => LoanRequestScreen(
-              token: token,
-              loanAmount: loanAmount,
-              repayableAmount: repayableAmount,
-              status: status,
-              loanStatus: loanStatus,
-            ),
-          ),
-        );
-        _phoneController.text ="";
-        _passwordController.text="";
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Login Failed: ${response.body}")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
-
-    setState(() {
-      _isLoading = false;
-    });
-  }
+  // Constants
+  static const String _apiUrl = "https://api.surekash.co.ke/api/auth/login";
+  static const String _appName = "SureCash";
 
   @override
   Widget build(BuildContext context) {
@@ -94,105 +30,100 @@ class _LoginState extends State<Login> {
       body: Stack(
         children: [
           _buildBackground(),
-    SafeArea(
-    child: SingleChildScrollView(
-          child: Center(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.2)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withOpacity(0.2),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  //  RichText(
-                  //   text: TextSpan(
-                  //     children: [
-                  //       TextSpan(
-                  //         text: "S",
-                  //         style: TextStyle(
-                  //           fontSize: 30,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Colors.blue[300], // S in blue
-                  //         ),
-                  //       ),
-                  //       TextSpan(
-                  //         text: "ure",
-                  //         style: TextStyle(
-                  //           fontSize: 24,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Colors.white, // Rest in white
-                  //         ),
-                  //       ),
-                  //       TextSpan(
-                  //         text: "C",
-                  //         style: TextStyle(
-                  //           fontSize: 30,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Colors.blue[300], // K in blue
-                  //         ),
-                  //       ),
-                  //       TextSpan(
-                  //         text: "ash",
-                  //         style: TextStyle(
-                  //           fontSize: 24,
-                  //           fontWeight: FontWeight.bold,
-                  //           color: Colors.white, // Rest in white
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-                  Image.asset('assets/images/app_logo.png'),
-                  const SizedBox(height: 15),
-                  _buildTextField(Icons.phone, "phone number", _phoneController),
-                  const SizedBox(height: 10),
-                  _passwordTextField(Icons.lock, "password", _passwordController, obscureText: true),
-                  const SizedBox(height: 20),
-                  _buildLoginButton(),
-                  const SizedBox(height: 10),
-                  const Text("Forgot Password?", style: TextStyle(color: Colors.black)),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => Registration()));
-                    },
-                    child: const Text("Register", style: TextStyle(color: Colors.black)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-    ),),
+          _buildLoginForm(),
         ],
       ),
     );
   }
 
   Widget _buildBackground() {
-    return Container(
-      color: Colors.white,
-      // decoration: const BoxDecoration(
-      //   gradient: LinearGradient(
-      //    // colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-      //     colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-      //     begin: Alignment.topLeft,
-      //     end: Alignment.bottomRight,
-      //   ),
-      // ),
+    return Container(color: Colors.white);
+  }
+
+  Widget _buildLoginForm() {
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: _buildFormDecoration(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildAppLogo(),
+                const SizedBox(height: 15),
+                _buildPhoneField(),
+                const SizedBox(height: 10),
+                _buildPasswordField(),
+                const SizedBox(height: 20),
+                _buildLoginButton(),
+                const SizedBox(height: 10),
+                _buildFooterActions(),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildTextField(IconData icon, String hint, TextEditingController controller, {bool obscureText = false}) {
+  BoxDecoration _buildFormDecoration() {
+    return BoxDecoration(
+      color: Colors.white.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: Colors.white.withOpacity(0.2)),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.white.withOpacity(0.2),
+          blurRadius: 10,
+          spreadRadius: 2,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppLogo() {
+    return Image.asset('assets/images/app_logo.png');
+  }
+
+  Widget _buildPhoneField() {
+    return _buildTextField(
+      icon: Icons.phone,
+      hint: "Phone number",
+      controller: _phoneController,
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextField(
+      controller: _passwordController,
+      obscureText: !_isPasswordVisible,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        hintText: "Password",
+        hintStyle: const TextStyle(color: Colors.black),
+        prefixIcon: const Icon(Icons.lock, color: Colors.black),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+            color: Colors.black,
+          ),
+          onPressed: _togglePasswordVisibility,
+        ),
+        border: _buildInputBorder(),
+      ),
+      style: const TextStyle(color: Colors.black),
+    );
+  }
+
+  Widget _buildTextField({
+    required IconData icon,
+    required String hint,
+    required TextEditingController controller,
+    bool obscureText = false,
+  }) {
     return TextField(
       controller: controller,
       obscureText: obscureText,
@@ -202,77 +133,201 @@ class _LoginState extends State<Login> {
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.black),
         prefixIcon: Icon(icon, color: Colors.black),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-         // borderSide: BorderSide.none,
-          borderSide: const BorderSide(color: Colors.grey, width: 1.0), // visible border
-        ),
+        border: _buildInputBorder(),
       ),
       style: const TextStyle(color: Colors.black),
     );
   }
 
+  InputBorder _buildInputBorder() {
+    return OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: const BorderSide(color: Colors.grey, width: 1.0),
+    );
+  }
+
   Widget _buildLoginButton() {
     return SizedBox(
-      width: double.infinity, // makes the button stretch to full width of parent
+      width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue[400],
-          padding: const EdgeInsets.symmetric(vertical: 10), // removed horizontal padding
+          padding: const EdgeInsets.symmetric(vertical: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        onPressed: _isLoading ? null : _login,
+        onPressed: _isLoading ? null : _handleLogin,
         child: _isLoading
             ? const CircularProgressIndicator(color: Colors.black)
             : const Text(
           "Login",
-          style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 24,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
   }
 
-
-  Widget _passwordTextField(
-      IconData icon, String hint, TextEditingController controller,
-      {bool obscureText = false}) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-       // bool isObscured = obscureText;
-
-        return TextField(
-          controller: controller,
-          obscureText: isObscured,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.white,
-            hintText: hint,
-            hintStyle: const TextStyle(color: Colors.black),
-            prefixIcon: Icon(icon, color: Colors.black),
-            suffixIcon: obscureText
-                ? IconButton(
-              icon: Icon(
-                isObscured ? Icons.visibility_off : Icons.visibility,
-                color: Colors.black,
-              ),
-              onPressed: () {
-                setState(() {
-                  isObscured = !isObscured;
-
-                });
-              },
-            )
-                : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              //borderSide: BorderSide.none,
-              borderSide: const BorderSide(color: Colors.grey, width: 1.0), // visible border
-            ),
+  Widget _buildFooterActions() {
+    return Column(
+      children: [
+        const Text(
+          "Forgot Password?",
+          style: TextStyle(color: Colors.black),
+        ),
+        TextButton(
+          onPressed: _navigateToRegistration,
+          child: const Text(
+            "Register",
+            style: TextStyle(color: Colors.black),
           ),
-          style: const TextStyle(color: Colors.black),
-        );
-      },
+        ),
+      ],
     );
   }
 
+  void _togglePasswordVisibility() {
+    setState(() {
+      _isPasswordVisible = !_isPasswordVisible;
+    });
+  }
+
+  void _navigateToRegistration() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const Registration()),
+    );
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_validateInputs()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await _performLogin();
+    } catch (e) {
+      _showErrorSnackbar("Error: $e");
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  bool _validateInputs() {
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (phone.isEmpty || password.isEmpty) {
+      _showErrorSnackbar("Please enter phone number and password");
+      return false;
+    }
+
+    return true;
+  }
+
+  Future<void> _performLogin() async {
+    final response = await http.post(
+      Uri.parse(_apiUrl),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "phone": _phoneController.text.trim(),
+        "password": _passwordController.text.trim(),
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      await _handleLoginSuccess(response.body);
+    } else {
+      _handleLoginFailure(response.body);
+    }
+  }
+
+  Future<void> _handleLoginSuccess(String responseBody) async {
+    final data = jsonDecode(responseBody);
+
+    _showSuccessSnackbar("Login Successful! Welcome, ${data['name'] ?? 'User'}");
+
+    final userData = _extractUserData(data);
+
+    await _navigateToHomePage(userData);
+
+    _clearForm();
+  }
+
+  Map<String, dynamic> _extractUserData(Map<String, dynamic> data) {
+    return {
+      'token': data['token'],
+      'userID': data['user_id']?.toString() ?? '',
+      'loanAmount': data['loan_amount']?.toString() ?? "0.00",
+      'repayableAmount': data['repayable_amount']?.toString() ?? "0.00",
+      'status': data['status'] ?? "none",
+      'loanStatus': data['loan_status'],
+      'userPhone': data['phone'] ?? _phoneController.text.trim(),
+      'loanId': data['loan_id']?.toString(),
+      'loanBalance': data['loan_balance']?.toString(),
+    };
+  }
+
+  Future<void> _navigateToHomePage(Map<String, dynamic> userData) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LoanRequestScreen(
+          token: userData['token']!,
+          userID: userData['userID']!,
+          loanAmount: userData['loanAmount']!,
+          repayableAmount: userData['repayableAmount']!,
+          status: userData['status']!,
+          loanStatus: userData['loanStatus'],
+          userPhone: userData['userPhone']!,
+        ),
+      ),
+    );
+  }
+
+  void _handleLoginFailure(String responseBody) {
+    final errorMessage = _extractErrorMessage(responseBody);
+    _showErrorSnackbar("Login Failed: $errorMessage");
+  }
+
+  String _extractErrorMessage(String responseBody) {
+    try {
+      final data = jsonDecode(responseBody);
+      return data['message'] ?? responseBody;
+    } catch (e) {
+      return responseBody;
+    }
+  }
+
+  void _showSuccessSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  void _clearForm() {
+    _phoneController.clear();
+    _passwordController.clear();
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 }
