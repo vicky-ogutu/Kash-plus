@@ -28,7 +28,7 @@ class LoanRequestScreen extends StatefulWidget {
 }
 
 class _LoanRequestScreenState extends State<LoanRequestScreen> {
-  double _loanAmount = 100;
+  double _selectedLoanAmount = 100;
   bool _isLoading = false;
   bool _hasPendingLoan = false;
   Map<String, dynamic>? _activeLoan;
@@ -63,12 +63,17 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   // Getters for assessment data with fallbacks
   double get _eligibleAmount => _assessmentData?['eligible_amount']?.toDouble() ?? 0.0;
   double get _interestRate => _assessmentData?['interest_rate']?.toDouble() ?? 0.0;
-  double get _interestFee => _assessmentData?['interest_fee']?.toDouble() ?? 0.0;
-  double get _totalRepayable => _assessmentData?['total_repayable']?.toDouble() ?? 0.0;
+  double get _interestFee => _calculateInterestFee(_selectedLoanAmount);
+  double get _totalRepayable => _selectedLoanAmount + _interestFee;
   String get _repaymentDueDate => _assessmentData?['repayment_due_date'] ?? _calculateDueDate(90);
   int get _tenureDays => _assessmentData?['tenure_days'] ?? 90;
   int get _creditScore => _assessmentData?['credit_score'] ?? 0;
   String get _remarks => _assessmentData?['remarks'] ?? "No assessment data available";
+
+  // Calculate interest fee based on selected amount
+  double _calculateInterestFee(double amount) {
+    return (amount * _interestRate) / 100;
+  }
 
   String _calculateDueDate(int tenureDays) {
     DateTime dueDate = DateTime.now().add(Duration(days: tenureDays));
@@ -175,6 +180,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         if (data['assessment'] != null) {
           setState(() {
             _assessmentData = data['assessment'];
+            // Set initial selected amount to eligible amount
+            _selectedLoanAmount = _eligibleAmount;
           });
 
           _showAssessmentDialog(data);
@@ -230,53 +237,105 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.assessment, color: Colors.green),
-            SizedBox(width: 10),
-            Text("Loan Assessment"),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              responseData['message'] ?? "Loan eligibility assessment successful.",
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.assessment, color: Colors.green),
+                SizedBox(width: 10),
+                Text("Loan Assessment"),
+              ],
             ),
-            const SizedBox(height: 15),
-            if (_assessmentData != null) ...[
-              _buildAssessmentDetailRow("Eligible Amount", "Ksh ${_eligibleAmount.toStringAsFixed(2)}"),
-              _buildAssessmentDetailRow("Interest Rate", "${_interestRate.toStringAsFixed(1)}%"),
-              _buildAssessmentDetailRow("Interest Fee", "Ksh ${_interestFee.toStringAsFixed(2)}"),
-              _buildAssessmentDetailRow("Total Repayable", "Ksh ${_totalRepayable.toStringAsFixed(2)}"),
-              _buildAssessmentDetailRow("Repayment Due", _formatDate(_repaymentDueDate)),
-              _buildAssessmentDetailRow("Tenure", "$_tenureDays days"),
-              _buildAssessmentDetailRow("Credit Score", _creditScore.toString()),
-              _buildAssessmentDetailRow("Remarks", _remarks),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    responseData['message'] ?? "Loan eligibility assessment successful.",
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // Loan Amount Slider
+                  const Text("Select Loan Amount", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 10),
+
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          "Ksh ${_selectedLoanAmount.toStringAsFixed(0)}",
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                        ),
+                        const SizedBox(height: 10),
+                        Slider(
+                          value: _selectedLoanAmount,
+                          min: 100,
+                          max: _eligibleAmount,
+                          divisions: (_eligibleAmount ~/ 100).toInt(),
+                          label: "Ksh ${_selectedLoanAmount.toStringAsFixed(0)}",
+                          onChanged: (value) {
+                            setDialogState(() {
+                              _selectedLoanAmount = value;
+                            });
+                          },
+                          activeColor: Colors.blueAccent,
+                          inactiveColor: Colors.grey,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Ksh 100", style: TextStyle(color: Colors.grey[600])),
+                            Text("Ksh ${_eligibleAmount.toStringAsFixed(0)}", style: TextStyle(color: Colors.grey[600])),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  // Loan Details
+                  _buildAssessmentDetailRow("Selected Amount", "Ksh ${_selectedLoanAmount.toStringAsFixed(2)}"),
+                  _buildAssessmentDetailRow("Interest Rate", "${_interestRate.toStringAsFixed(1)}%"),
+                  _buildAssessmentDetailRow("Interest Fee", "Ksh ${_calculateInterestFee(_selectedLoanAmount).toStringAsFixed(2)}"),
+                  _buildAssessmentDetailRow("Total Repayable", "Ksh ${(_selectedLoanAmount + _calculateInterestFee(_selectedLoanAmount)).toStringAsFixed(2)}"),
+                  _buildAssessmentDetailRow("Repayment Due", _formatDate(_repaymentDueDate)),
+                  _buildAssessmentDetailRow("Tenure", "$_tenureDays days"),
+                  _buildAssessmentDetailRow("Credit Score", _creditScore.toString()),
+                  _buildAssessmentDetailRow("Remarks", _remarks),
+
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Do you want to proceed with this loan application?",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: _selectedLoanAmount > 0 ? () {
+                  Navigator.pop(context);
+                  _applyForLoan();
+                } : null,
+                child: const Text("Apply Now"),
+              ),
             ],
-            const SizedBox(height: 10),
-            const Text(
-              "Do you want to proceed with this loan application?",
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: _eligibleAmount > 0 ? () {
-              Navigator.pop(context);
-              _applyForLoan();
-            } : null,
-            child: const Text("Apply Now"),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -295,10 +354,10 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 
   Future<void> _applyForLoan() async {
-    if (_assessmentData == null || _eligibleAmount <= 0) {
+    if (_assessmentData == null || _selectedLoanAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Please check eligibility first and ensure you have an eligible amount"),
+          content: Text("Please check eligibility first and select a valid loan amount"),
           backgroundColor: Colors.orange,
         ),
       );
@@ -318,7 +377,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         },
         body: jsonEncode({
           "user_id": widget.userID,
-          "amount": _eligibleAmount.toStringAsFixed(2),
+          "amount": _selectedLoanAmount.toStringAsFixed(2),
           "repayable_amount": _totalRepayable.toStringAsFixed(2),
           "tenure_days": _tenureDays,
           "repayment_due_date": _repaymentDueDate,
@@ -337,7 +396,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         setState(() {
           _hasPendingLoan = true;
           _activeLoan = data['loan_data'] ?? {
-            'amount': _eligibleAmount.toStringAsFixed(2),
+            'amount': _selectedLoanAmount.toStringAsFixed(2),
             'repayable_amount': _totalRepayable.toStringAsFixed(2),
             'status': 'pending',
             'balance': _totalRepayable.toStringAsFixed(2),
@@ -936,12 +995,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
                   _buildLoanDetailRow("Total Repayable", "Ksh ${_activeLoan?['repayable_amount']?.toString() ?? '0.00'}"),
 
-                  // if (interestRate > 0)
-                  //   _buildLoanDetailRow("Interest Rate", "${interestRate.toStringAsFixed(1)}%"),
-
-                  // if (interestAmount > 0)
-                  //   _buildLoanDetailRow("Interest Amount", "Ksh ${interestAmount.toStringAsFixed(2)}"),
-
                   _buildLoanDetailRow("Registered Phone", widget.userPhone),
 
                   if (_activeLoan?['due_date'] != null)
@@ -1035,53 +1088,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
               ),
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // Card(
-          //   elevation: 4,
-          //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          //   child: Padding(
-          //     padding: const EdgeInsets.all(20.0),
-          //     child: Column(
-          //       crossAxisAlignment: CrossAxisAlignment.start,
-          //       children: [
-          //         const Text(
-          //           "Quick Actions",
-          //           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          //         ),
-          //         const SizedBox(height: 15),
-          //         ListTile(
-          //           leading: const Icon(Icons.calendar_today, color: Colors.blue),
-          //           title: const Text("Extend Repayment Period"),
-          //           onTap: () {
-          //             ScaffoldMessenger.of(context).showSnackBar(
-          //               const SnackBar(content: Text("Extend repayment feature coming soon!")),
-          //             );
-          //           },
-          //         ),
-          //         ListTile(
-          //           leading: const Icon(Icons.schedule, color: Colors.orange),
-          //           title: const Text("View Repayment Schedule"),
-          //           onTap: () {
-          //             ScaffoldMessenger.of(context).showSnackBar(
-          //               const SnackBar(content: Text("Repayment schedule feature coming soon!")),
-          //             );
-          //           },
-          //         ),
-          //         ListTile(
-          //           leading: const Icon(Icons.help_center, color: Colors.green),
-          //           title: const Text("Contact Support"),
-          //           onTap: () {
-          //             ScaffoldMessenger.of(context).showSnackBar(
-          //               const SnackBar(content: Text("Contact support feature coming soon!")),
-          //             );
-          //           },
-          //         ),
-          //       ],
-          //     ),
-          //   ),
-          // ),
         ],
       ),
     );
