@@ -11,6 +11,7 @@ class LoanRequestScreen extends StatefulWidget {
   final String status;
   final String? loanStatus;
   final String userPhone;
+  final String? loanId;
 
   const LoanRequestScreen({
     Key? key,
@@ -21,6 +22,7 @@ class LoanRequestScreen extends StatefulWidget {
     required this.status,
     this.loanStatus,
     required this.userPhone,
+    required this.loanId,
   }) : super(key: key);
 
   @override
@@ -51,11 +53,21 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
       if (_hasPendingLoan) {
         _activeLoan = {
+          'id': widget.loanId, // Use the loanId from widget
+          'loan_id': widget.loanId, // Also set as loan_id for compatibility
           'amount': widget.loanAmount,
           'repayable_amount': widget.repayableAmount,
           'status': widget.status,
           'balance': widget.repayableAmount,
         };
+
+        // Debug print to verify loan data
+        print('=== INITIAL LOAN DATA FROM LOGIN ===');
+        print('Loan ID from login: ${widget.loanId}');
+        print('Loan Amount: ${widget.loanAmount}');
+        print('Status: ${widget.status}');
+        print('Active Loan Map: $_activeLoan');
+        print('==============================');
       }
     });
   }
@@ -427,6 +439,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     });
   }
 
+
   Future<void> _initiateSTKPush() async {
     setState(() {
       _isLoading = true;
@@ -434,8 +447,21 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     });
 
     try {
-      final amount = _activeLoan?['balance']?.toString() ?? _activeLoan?['repayable_amount']?.toString() ?? '0';
-      final loanId = _activeLoan?['id']?.toString();
+      // Debug: Print the entire active loan data to see what's available
+      print('=== ACTIVE LOAN DATA ===');
+      print(_activeLoan);
+      print('========================');
+
+      // Try multiple possible keys for loan ID
+      final loanId = _activeLoan?['id']?.toString() ??
+          _activeLoan?['loan_id']?.toString() ??
+          _activeLoan?['loanId']?.toString();
+
+      // Try multiple possible keys for amount
+      final amount = _activeLoan?['balance']?.toString() ??
+          _activeLoan?['repayable_amount']?.toString() ??
+          _activeLoan?['amount']?.toString() ??
+          '0';
 
       String formattedPhone = _formatPhoneForMPesa(widget.userPhone);
 
@@ -444,7 +470,27 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       print('Formatted Phone: $formattedPhone');
       print('Amount: $amount');
       print('Loan ID: $loanId');
+      print('Token: ${widget.token}');
       print('=====================');
+
+      // Validate required fields
+      if (loanId == null || loanId.isEmpty) {
+        _handleSTKError('Loan ID is missing. Cannot process payment.');
+        return;
+      }
+
+      if (amount == '0' || double.tryParse(amount) == null) {
+        _handleSTKError('Invalid payment amount: $amount');
+        return;
+      }
+
+      // Convert amount to integer (M-Pesa usually expects whole numbers)
+      final parsedAmount = double.tryParse(amount)?.toInt() ?? 0;
+
+      if (parsedAmount <= 0) {
+        _handleSTKError('Payment amount must be greater than 0');
+        return;
+      }
 
       final response = await http.post(
         Uri.parse("https://api.surekash.co.ke/api/loan/repay"),
@@ -453,19 +499,26 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           "Authorization": "Bearer ${widget.token}",
         },
         body: jsonEncode({
-          "amount": amount,
-          "phone": formattedPhone,
-          "loan_id": loanId,
+          "loan_id": int.tryParse(loanId) ?? 0, // Ensure it's integer
+          "amount": parsedAmount, // Send as integer
+          "phone_number": formattedPhone,
         }),
       );
 
-      print('Response: ${response.statusCode} - ${response.body}');
+      print('=== STK PUSH RESPONSE ===');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('=========================');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final message = data['message']?.toLowerCase() ?? '';
+        final responseCode = data['ResponseCode']?.toString() ?? data['responseCode']?.toString();
 
-        if (message.contains('success') || message.contains('initiated') || data['ResponseCode'] == '0') {
+        if (message.contains('success') ||
+            message.contains('initiated') ||
+            responseCode == '0' ||
+            data['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(data['message'] ?? "STK Push sent successfully!"),
@@ -474,19 +527,95 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           );
           _showSTKSuccessDialog(data);
         } else {
-          _handleSTKError(data['message'] ?? 'Failed to initiate payment');
+          _handleSTKError(data['message'] ?? data['error'] ?? 'Failed to initiate payment');
         }
+      } else if (response.statusCode == 400) {
+        // Handle 400 specifically with better error message
+        try {
+          final errorData = jsonDecode(response.body);
+          final errorMessage = errorData['message'] ??
+              errorData['error'] ??
+              'Bad request - check your input data';
+          _handleSTKError('Payment failed: $errorMessage');
+        } catch (e) {
+          _handleSTKError('Payment failed: Invalid request format');
+        }
+      } else if (response.statusCode == 401) {
+        _handleSTKError('Authentication failed. Please login again.');
+      } else if (response.statusCode == 500) {
+        _handleSTKError('Server error. Please try again later.');
       } else {
         _handleSTKError('Server error: ${response.statusCode}');
       }
     } catch (e) {
-      _handleSTKError('Error: ${e.toString()}');
+      print('STK Push Error: $e');
+      _handleSTKError('Network error: ${e.toString()}');
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
   }
+  // Future<void> _initiateSTKPush() async {
+  //   setState(() {
+  //     _isLoading = true;
+  //     _waitingForPIN = true;
+  //   });
+  //
+  //   try {
+  //     final amount = _activeLoan?['balance']?.toString() ?? _activeLoan?['repayable_amount']?.toString() ?? '0';
+  //     final loanId = _activeLoan?['id']?.toString();
+  //
+  //     String formattedPhone = _formatPhoneForMPesa(widget.userPhone);
+  //
+  //     print('=== STK Push Debug ===');
+  //     print('Original Phone: ${widget.userPhone}');
+  //     print('Formatted Phone: $formattedPhone');
+  //     print('Amount: $amount');
+  //     print('Loan ID: $loanId');
+  //     print('=====================');
+  //
+  //     final response = await http.post(
+  //       Uri.parse("https://api.surekash.co.ke/api/loan/repay"),
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         "Authorization": "Bearer ${widget.token}",
+  //       },
+  //       body: jsonEncode({
+  //         "amount": amount,
+  //         "phone_number": formattedPhone,
+  //         "loan_id": loanId,
+  //       }),
+  //     );
+  //
+  //     print('Response: ${response.statusCode} - ${response.body}');
+  //
+  //     if (response.statusCode == 200) {
+  //       final data = jsonDecode(response.body);
+  //       final message = data['message']?.toLowerCase() ?? '';
+  //
+  //       if (message.contains('success') || message.contains('initiated') || data['ResponseCode'] == '0') {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //             content: Text(data['message'] ?? "STK Push sent successfully!"),
+  //             backgroundColor: Colors.green,
+  //           ),
+  //         );
+  //         _showSTKSuccessDialog(data);
+  //       } else {
+  //         _handleSTKError(data['message'] ?? 'Failed to initiate payment');
+  //       }
+  //     } else {
+  //       _handleSTKError('Server error: ${response.statusCode}');
+  //     }
+  //   } catch (e) {
+  //     _handleSTKError('Error: ${e.toString()}');
+  //   } finally {
+  //     setState(() {
+  //       _isLoading = false;
+  //     });
+  //   }
+  // }
 
   String _formatPhoneForMPesa(String phone) {
     String cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
@@ -600,7 +729,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     final status = _activeLoan?['status']?.toString().toLowerCase() ?? '';
 
     // Show repay button for these statuses (EXCLUDING 'pending')
-    final repayableStatuses = ['approved', 'disbursed', 'active', 'overdue'];
+    final repayableStatuses = ['partially repaid' 'disbursed', 'active', 'overdue'];
 
     return repayableStatuses.contains(status) &&
         !_waitingForPIN &&
@@ -746,15 +875,15 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Help & Support feature coming soon!")));
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.settings, color: Colors.blueAccent),
-            title: const Text("Settings"),
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Settings feature coming soon!")));
-            },
-          ),
-          const Divider(),
+          // ListTile(
+          //   leading: const Icon(Icons.settings, color: Colors.blueAccent),
+          //   title: const Text("Settings"),
+          //   onTap: () {
+          //     Navigator.pop(context);
+          //     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Settings feature coming soon!")));
+          //   },
+          // ),
+          // const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text("Logout", style: TextStyle(color: Colors.red)),
