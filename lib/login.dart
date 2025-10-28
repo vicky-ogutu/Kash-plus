@@ -515,7 +515,8 @@ class _LoginState extends State<Login> {
           status: userData['status']!,
           loanStatus: userData['loanStatus'],
           userPhone: userData['userPhone']!,
-          loanId: userData['loanId'], // Add this line - pass the loanId
+          loanId: userData['loanId'],
+          loanBalance: userData['loan_balance'],
 
         ),
       ),

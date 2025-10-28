@@ -2,7 +2,7 @@
     <application
         android:label="SureCash"
         android:name="${applicationName}"
-        android:icon="@mipmap/app_logo">
+        android:icon="@mipmap/app_logo2">
         <activity
             android:name=".MainActivity"
             android:exported="true"
