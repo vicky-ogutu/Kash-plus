@@ -32,7 +32,7 @@ class LoanRequestScreen extends StatefulWidget {
   State<LoanRequestScreen> createState() => _LoanRequestScreenState();
 }
 
-class _LoanRequestScreenState extends State<LoanRequestScreen> {
+class _LoanRequestScreenState extends State<LoanRequestScreen> with WidgetsBindingObserver {
   double _selectedLoanAmount = 100;
   bool _isLoading = true;
   bool _hasPendingLoan = false;
@@ -41,11 +41,30 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   Map<String, dynamic>? _assessmentData;
   Timer? _autoRefreshTimer;
   bool _initialDataLoaded = false;
+  String? _previousLoanStatus;
+  int _refreshCounter = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _previousLoanStatus = widget.status;
+    print("Initial loan status: ${widget.status}");
     _loadInitialData();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshAllData();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
+    super.dispose();
   }
 
   void _loadInitialData() async {
@@ -59,15 +78,13 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _autoRefreshTimer?.cancel();
-    super.dispose();
-  }
-
   void _startAutoRefresh() {
-    _autoRefreshTimer = Timer.periodic(Duration(seconds: 10), (timer) {
-      if (_hasPendingLoan) {
+    _autoRefreshTimer = Timer.periodic(Duration(seconds: 15), (timer) {
+      _refreshCounter++;
+      print("Auto-refresh #$_refreshCounter - Has pending loan: $_hasPendingLoan");
+
+      if (_hasPendingLoan || _waitingForPIN) {
+        print("Fetching updated loan details...");
         _fetchCurrentLoanDetails();
       }
     });
@@ -89,6 +106,10 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
     bool hasPendingLoan = hasLoanAmount && isNotFullyRepaid && hasValidLoanStatus;
 
+    print("Initial loan check:");
+    print("  Amount: ${widget.loanAmount}, Status: ${widget.status}");
+    print("  Has Loan: $hasPendingLoan");
+
     setState(() {
       _hasPendingLoan = hasPendingLoan;
 
@@ -102,19 +123,24 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           'balance': widget.loanBalance ?? widget.repayableAmount,
           'original_repayable': widget.repayableAmount,
         };
+        print("Active loan initialized: $_activeLoan");
       }
     });
   }
 
   Future<void> _fetchCurrentLoanDetails() async {
-    if (widget.loanId == null || widget.loanId!.isEmpty) {
+    final currentLoanId = _activeLoan?['id'] ?? _activeLoan?['loan_id'] ?? widget.loanId;
+
+    if (currentLoanId == null || currentLoanId.toString().isEmpty) {
+      print("No loan ID available, fetching user loans");
       await _fetchUserLoans();
       return;
     }
 
     try {
+      print("Fetching loan details for ID: $currentLoanId");
       final response = await http.get(
-        Uri.parse("https://api.surekash.co.ke/api/loan/details/${widget.loanId}"),
+        Uri.parse("https://api.surekash.co.ke/api/loan/details/${currentLoanId.toString()}"),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer ${widget.token}",
@@ -124,14 +150,57 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['loan'] != null) {
+          final newLoanData = data['loan'];
+          final newStatus = newLoanData['status']?.toString().toLowerCase() ?? '';
+          final currentBalance = double.tryParse(newLoanData['balance']?.toString() ?? '0') ?? 0;
+
+          print("=== LOAN STATUS UPDATE ===");
+          print("Previous status: $_previousLoanStatus");
+          print("New status: $newStatus");
+          print("Current balance: $currentBalance");
+
+          bool statusChanged = _previousLoanStatus != newStatus;
+          _previousLoanStatus = newStatus;
+
+          // Check if loan is fully repaid
+          bool isFullyRepaid = newStatus == 'fully repaid' ||
+              newStatus == 'repaid' ||
+              newStatus == 'completed' ||
+              currentBalance <= 0;
+
+          // Check if loan is disbursed/active
+          bool isDisbursed = newStatus == 'disbursed' ||
+              newStatus == 'active' ||
+              newStatus == 'approved';
+
+          print("Is Fully Repaid: $isFullyRepaid");
+          print("Is Disbursed: $isDisbursed");
+          print("Status Changed: $statusChanged");
+
           setState(() {
-            _activeLoan = data['loan'];
-            _hasPendingLoan = _activeLoan?['status'] != 'fully repaid' &&
-                _activeLoan?['status'] != 'repaid' &&
-                _activeLoan?['status'] != 'completed' &&
-                (_activeLoan?['balance'] != null &&
-                    double.parse(_activeLoan?['balance']?.toString() ?? '0') > 0);
+            _activeLoan = newLoanData;
+            _hasPendingLoan = !isFullyRepaid;
+
+            if (isFullyRepaid && statusChanged) {
+              _assessmentData = null;
+              _waitingForPIN = false;
+              _showLoanRepaidSuccess();
+            }
+
+            if (statusChanged && isDisbursed) {
+              _showLoanDisbursedNotification();
+            }
+
+            // If balance is 0 but status hasn't updated yet, force update
+            if (currentBalance <= 0 && !isFullyRepaid) {
+              _hasPendingLoan = false;
+              _assessmentData = null;
+              _waitingForPIN = false;
+            }
           });
+
+          print("Updated _hasPendingLoan: $_hasPendingLoan");
+          print("=== END STATUS UPDATE ===");
         }
       } else if (response.statusCode == 404) {
         await _fetchUserLoans();
@@ -139,6 +208,34 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     } catch (e) {
       print('Error fetching loan details: $e');
     }
+  }
+
+  void _showLoanRepaidSuccess() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          "🎉 Loan fully repaid! You can now apply for a new loan.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showLoanDisbursedNotification() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          "✅ Loan disbursed! You can now repay your loan.",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   Future<void> _fetchUserLoans() async {
@@ -159,18 +256,40 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
           for (var loan in loans) {
             String status = loan['status']?.toString().toLowerCase() ?? '';
-            if (status != 'fully repaid' && status != 'repaid' && status != 'completed') {
+            double balance = double.tryParse(loan['balance']?.toString() ?? '0') ?? 0;
+
+            bool isActiveLoan = status != 'fully repaid' &&
+                status != 'repaid' &&
+                status != 'completed' &&
+                balance > 0;
+
+            if (isActiveLoan) {
               activeLoan = loan;
               break;
             }
           }
 
           if (activeLoan != null) {
+            print("Found active loan: ${activeLoan['status']}");
             setState(() {
               _activeLoan = activeLoan;
               _hasPendingLoan = true;
+              _previousLoanStatus = activeLoan?['status']?.toString().toLowerCase();
+            });
+          } else {
+            print("No active loans found");
+            setState(() {
+              _hasPendingLoan = false;
+              _activeLoan = null;
+              _waitingForPIN = false;
             });
           }
+        } else {
+          setState(() {
+            _hasPendingLoan = false;
+            _activeLoan = null;
+            _waitingForPIN = false;
+          });
         }
       }
     } catch (e) {
@@ -179,6 +298,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 
   Future<void> _refreshAllData() async {
+    print("Manual refresh triggered");
     setState(() {
       _isLoading = true;
     });
@@ -188,6 +308,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     if (!_hasPendingLoan) {
       setState(() {
         _assessmentData = null;
+        _waitingForPIN = false;
       });
     }
 
@@ -195,8 +316,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       _isLoading = false;
     });
   }
-
-  // ... (Keep all the existing getter methods like _eligibleAmount, _interestRate, etc.)
 
   double get _eligibleAmount => _assessmentData?['eligible_amount']?.toDouble() ?? 0.0;
   double get _interestRate => _assessmentData?['interest_rate']?.toDouble() ?? 0.0;
@@ -239,8 +358,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         double totalRepayable = double.parse(_activeLoan!['repayable_amount']?.toString() ?? '0');
         if (principal > 0) {
           double interest = totalRepayable - principal;
-          double interestRate = (interest / principal) * 100;
-          return interestRate;
+          return (interest / principal) * 100;
         }
       }
       return _interestRate;
@@ -621,9 +739,22 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
             'due_date': _repaymentDueDate,
             'tenure_days': _tenureDays,
           };
+          _previousLoanStatus = 'pending';
         });
 
         _assessmentData = null;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              "Loan application submitted! Waiting for approval...",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       } else {
         final errorData = jsonDecode(response.body);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -646,8 +777,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       });
     }
   }
-
-  // ... (Keep all the STK push and repayment methods as they were)
 
   Future<void> _initiateSTKPush() async {
     setState(() {
@@ -747,7 +876,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       checks++;
       _fetchCurrentLoanDetails();
 
-      if (checks >= 24 || !_waitingForPIN || !_hasPendingLoan) {
+      if (checks >= 24) {
         timer.cancel();
         setState(() {
           _waitingForPIN = false;
@@ -894,11 +1023,13 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     final status = _activeLoan?['status']?.toString().toLowerCase() ?? '';
     final currentBalance = double.tryParse(_activeLoan?['balance']?.toString() ?? '0') ?? 0;
 
-    final repayableStatuses = ['approved', 'disbursed', 'active', 'overdue', 'partially repaid'];
+    // Don't show repay button if waiting for PIN or balance is 0
+    if (_waitingForPIN || currentBalance <= 0) {
+      return false;
+    }
 
-    return repayableStatuses.contains(status) &&
-        !_waitingForPIN &&
-        currentBalance > 0;
+    final repayableStatuses = ['approved', 'disbursed', 'active', 'overdue', 'partially repaid'];
+    return repayableStatuses.contains(status);
   }
 
   IconData _getStatusIcon(String status) {
@@ -967,7 +1098,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     }
   }
 
-  // NEW: Get status-based description
   String _getStatusDescription(String status) {
     switch (status.toLowerCase()) {
       case 'repaid':
@@ -1188,14 +1318,24 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     );
   }
 
-  // NEW: Status-based view that shows different screens based on loan status
   Widget _buildStatusBasedView() {
     final status = _activeLoan?['status']?.toString().toLowerCase() ?? 'pending';
+    final currentBalance = double.tryParse(_activeLoan?['balance']?.toString() ?? '0') ?? 0;
+
+    // Force update if balance is 0 but status hasn't updated
+    if (currentBalance <= 0 && _hasPendingLoan) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _hasPendingLoan = false;
+          _waitingForPIN = false;
+        });
+      });
+    }
 
     switch (status) {
       case 'pending':
-        return _buildPendingLoanView();
       case 'approved':
+        return _buildPendingLoanView();
       case 'disbursed':
       case 'active':
       case 'overdue':
@@ -1203,13 +1343,13 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         return _buildRepayLoanView();
       case 'repaid':
       case 'fully repaid':
+      case 'completed':
         return _buildFullyRepaidView();
       default:
         return _buildPendingLoanView();
     }
   }
 
-  // NEW: Pending loan view
   Widget _buildPendingLoanView() {
     return RefreshIndicator(
       onRefresh: _refreshAllData,
@@ -1276,7 +1416,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     );
   }
 
-  // NEW: Repay loan view for approved/disbursed/active loans
   Widget _buildRepayLoanView() {
     double amountRepaid = _calculateAmountRepaid();
     double progress = _calculateRepaymentProgress();
@@ -1429,7 +1568,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     );
   }
 
-  // NEW: Fully repaid loan view
   Widget _buildFullyRepaidView() {
     return RefreshIndicator(
       onRefresh: _refreshAllData,
@@ -1489,6 +1627,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                             _hasPendingLoan = false;
                             _activeLoan = null;
                             _assessmentData = null;
+                            _waitingForPIN = false;
                           });
                         },
                         style: ElevatedButton.styleFrom(
@@ -1519,7 +1658,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     );
   }
 
-  // NEW: Reusable loan detail card
   Widget _buildLoanDetailCard() {
     return Card(
       elevation: 2,
@@ -1590,6 +1728,32 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
             onPressed: _refreshAllData,
             tooltip: "Refresh Data",
           ),
+          if (_hasPendingLoan)
+            IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("Auto-Refresh Status"),
+                    content: Text(
+                        "Auto-refresh is ${_autoRefreshTimer?.isActive == true ? 'ACTIVE' : 'INACTIVE'}\n"
+                            "Refresh count: $_refreshCounter\n"
+                            "Current status: ${_activeLoan?['status'] ?? 'Unknown'}\n"
+                            "Has pending loan: $_hasPendingLoan\n"
+                            "Balance: ${_activeLoan?['balance'] ?? '0'}"
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text("OK"),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              tooltip: "Refresh Status",
+            ),
         ],
       ),
       drawer: _buildDrawer(),

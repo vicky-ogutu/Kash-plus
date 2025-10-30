@@ -134,7 +134,6 @@ class _LoginState extends State<Login> {
   Widget _buildAppLogo() {
     return Column(
       children: [
-        // Option 1: Using Asset Image directly
         Container(
           width: 80,
           height: 80,
@@ -155,7 +154,6 @@ class _LoginState extends State<Login> {
               height: 80,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                // Fallback if image doesn't exist
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.blue.shade700,
@@ -188,52 +186,6 @@ class _LoginState extends State<Login> {
             fontSize: 14,
             color: Colors.grey.shade600,
             fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // Alternative logo method with different styling
-  Widget _buildAppLogoAlternative() {
-    return Column(
-      children: [
-        // Option 2: Circular logo with background
-        Container(
-          width: 100,
-          height: 100,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blue.shade800.withOpacity(0.3),
-                blurRadius: 15,
-                spreadRadius: 3,
-              ),
-            ],
-          ),
-          child: Image.asset(
-            'assets/images/logo.png',
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Icon(
-                Icons.account_balance,
-                color: Colors.blue.shade700,
-                size: 40,
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          _appName,
-          style: const TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.5,
           ),
         ),
       ],
@@ -384,7 +336,6 @@ class _LoginState extends State<Login> {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth > 300) {
-          // Row layout for wider screens
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -393,7 +344,6 @@ class _LoginState extends State<Login> {
             ],
           );
         } else {
-          // Column layout for very narrow screens
           return Column(
             children: [
               _buildForgotPasswordButton(),
@@ -499,12 +449,12 @@ class _LoginState extends State<Login> {
       'userPhone': data['phone'] ?? _phoneController.text.trim(),
       'loanId': data['loan_id']?.toString(),
       'loanBalance': data['loan_balance']?.toString(),
-
     };
   }
 
   Future<void> _navigateToHomePage(Map<String, dynamic> userData) async {
-    await Navigator.push(
+    // Use pushReplacement to prevent going back to login
+    await Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (context) => LoanRequestScreen(
@@ -516,8 +466,7 @@ class _LoginState extends State<Login> {
           loanStatus: userData['loanStatus'],
           userPhone: userData['userPhone']!,
           loanId: userData['loanId'],
-          loanBalance: userData['loan_balance'],
-
+          loanBalance: userData['loanBalance'],
         ),
       ),
     );
