@@ -34,7 +34,7 @@ class LoanRequestScreen extends StatefulWidget {
 
 class _LoanRequestScreenState extends State<LoanRequestScreen> {
   double _selectedLoanAmount = 100;
-  bool _isLoading = true; // Start with loading true to wait for initial data
+  bool _isLoading = true;
   bool _hasPendingLoan = false;
   Map<String, dynamic>? _activeLoan;
   bool _waitingForPIN = false;
@@ -49,7 +49,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 
   void _loadInitialData() async {
-    _checkInitialLoanStatus(); // Remove await since it's not async
+    _checkInitialLoanStatus();
     await _fetchCurrentLoanDetails();
     _startAutoRefresh();
 
@@ -67,14 +67,13 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
   void _startAutoRefresh() {
     _autoRefreshTimer = Timer.periodic(Duration(seconds: 10), (timer) {
-      if (_waitingForPIN || _hasPendingLoan) {
+      if (_hasPendingLoan) {
         _fetchCurrentLoanDetails();
       }
     });
   }
 
   void _checkInitialLoanStatus() {
-    // More comprehensive check for any active/pending loan status
     bool hasLoanAmount = widget.loanAmount.isNotEmpty &&
         widget.loanAmount != "0.00" &&
         widget.loanAmount != "0" &&
@@ -90,15 +89,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
 
     bool hasPendingLoan = hasLoanAmount && isNotFullyRepaid && hasValidLoanStatus;
 
-    print("Initial loan check:");
-    print("  Loan Amount: ${widget.loanAmount}");
-    print("  Status: ${widget.status}");
-    print("  Loan ID: ${widget.loanId}");
-    print("  Has Loan Amount: $hasLoanAmount");
-    print("  Is Not Fully Repaid: $isNotFullyRepaid");
-    print("  Has Valid Status: $hasValidLoanStatus");
-    print("  Has Pending Loan: $hasPendingLoan");
-
     setState(() {
       _hasPendingLoan = hasPendingLoan;
 
@@ -112,13 +102,11 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           'balance': widget.loanBalance ?? widget.repayableAmount,
           'original_repayable': widget.repayableAmount,
         };
-        print("Active loan set from initial data: $_activeLoan");
       }
     });
   }
 
   Future<void> _fetchCurrentLoanDetails() async {
-    // If we don't have a loan ID but think we might have a loan, try to get user's loans
     if (widget.loanId == null || widget.loanId!.isEmpty) {
       await _fetchUserLoans();
       return;
@@ -144,11 +132,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                 (_activeLoan?['balance'] != null &&
                     double.parse(_activeLoan?['balance']?.toString() ?? '0') > 0);
           });
-          print("Updated loan details from API: $_activeLoan");
-          print("Has pending loan: $_hasPendingLoan");
         }
       } else if (response.statusCode == 404) {
-        // Loan not found, try to fetch user loans
         await _fetchUserLoans();
       }
     } catch (e) {
@@ -169,7 +154,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['loans'] != null && data['loans'] is List && data['loans'].isNotEmpty) {
-          // Find the most recent active/pending loan
           List<dynamic> loans = data['loans'];
           Map<String, dynamic>? activeLoan;
 
@@ -186,7 +170,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
               _activeLoan = activeLoan;
               _hasPendingLoan = true;
             });
-            print("Found active loan from user loans: $_activeLoan");
           }
         }
       }
@@ -212,6 +195,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       _isLoading = false;
     });
   }
+
+  // ... (Keep all the existing getter methods like _eligibleAmount, _interestRate, etc.)
 
   double get _eligibleAmount => _assessmentData?['eligible_amount']?.toDouble() ?? 0.0;
   double get _interestRate => _assessmentData?['interest_rate']?.toDouble() ?? 0.0;
@@ -342,7 +327,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 
   Future<void> _checkEligibility() async {
-    // FIRST check if there's an active/pending loan - if yes, show message and return immediately
     if (_hasPendingLoan) {
       _showPendingLoanMessage();
       return;
@@ -598,7 +582,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     });
 
     try {
-      // Calculate repayable amount based on selected amount
       double interestFee = (_selectedLoanAmount * _interestRate / 100).ceilToDouble();
       double totalRepayable = (_selectedLoanAmount + interestFee).ceilToDouble();
 
@@ -626,7 +609,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           ),
         );
 
-        // Update state with new loan data
         setState(() {
           _hasPendingLoan = true;
           _activeLoan = data['loan_data'] ?? {
@@ -641,7 +623,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           };
         });
 
-        // Clear assessment data since user now has an active loan
         _assessmentData = null;
       } else {
         final errorData = jsonDecode(response.body);
@@ -665,6 +646,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       });
     }
   }
+
+  // ... (Keep all the STK push and repayment methods as they were)
 
   Future<void> _initiateSTKPush() async {
     setState(() {
@@ -728,7 +711,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           );
           _showSTKSuccessDialog(data);
 
-          // Start auto-refresh to check payment status
           _startPaymentStatusCheck();
         } else {
           _handleSTKError(data['message'] ?? data['error'] ?? 'Failed to initiate payment');
@@ -760,13 +742,11 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 
   void _startPaymentStatusCheck() {
-    // Check payment status every 5 seconds for 2 minutes
     int checks = 0;
     Timer.periodic(Duration(seconds: 5), (timer) {
       checks++;
       _fetchCurrentLoanDetails();
 
-      // Stop checking after 2 minutes (24 checks) or when payment is completed
       if (checks >= 24 || !_waitingForPIN || !_hasPendingLoan) {
         timer.cancel();
         setState(() {
@@ -987,6 +967,29 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     }
   }
 
+  // NEW: Get status-based description
+  String _getStatusDescription(String status) {
+    switch (status.toLowerCase()) {
+      case 'repaid':
+      case 'fully repaid':
+        return "Your loan has been fully repaid. You can apply for a new loan anytime.";
+      case 'partially repaid':
+        return "You have partially repaid your loan. Continue with payments to clear the remaining balance.";
+      case 'pending':
+        return "Your loan application is being processed. You'll be notified once it's approved.";
+      case 'approved':
+        return "Your loan has been approved! The funds will be disbursed to your account shortly.";
+      case 'disbursed':
+        return "Loan amount has been disbursed to your account. You can now start repaying.";
+      case 'active':
+        return "Your loan is active. Make sure to repay on time to avoid penalties.";
+      case 'overdue':
+        return "Your loan repayment is overdue. Please repay immediately to avoid additional charges.";
+      default:
+        return "Your loan application is being processed.";
+    }
+  }
+
   Widget _buildDrawer() {
     return Drawer(
       child: ListView(
@@ -1082,12 +1085,10 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 
   Widget _buildLoanRequestView() {
-    // If there's a pending or active loan, show only the active loan view
     if (_hasPendingLoan) {
-      return _buildActiveLoanView();
+      return _buildStatusBasedView();
     }
 
-    // Otherwise show normal eligibility UI
     bool hasEligibility = _assessmentData != null && _eligibleAmount > 0;
 
     return RefreshIndicator(
@@ -1096,7 +1097,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Main eligibility card
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1131,7 +1131,6 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // Check Eligibility Card
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1189,16 +1188,100 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     );
   }
 
-  Widget _buildActiveLoanView() {
-    double interestAmount = _calculateInterestAmount();
-    double interestRate = _calculateInterestRate();
-    int daysRemaining = _calculateDaysRemaining();
+  // NEW: Status-based view that shows different screens based on loan status
+  Widget _buildStatusBasedView() {
+    final status = _activeLoan?['status']?.toString().toLowerCase() ?? 'pending';
+
+    switch (status) {
+      case 'pending':
+        return _buildPendingLoanView();
+      case 'approved':
+      case 'disbursed':
+      case 'active':
+      case 'overdue':
+      case 'partially repaid':
+        return _buildRepayLoanView();
+      case 'repaid':
+      case 'fully repaid':
+        return _buildFullyRepaidView();
+      default:
+        return _buildPendingLoanView();
+    }
+  }
+
+  // NEW: Pending loan view
+  Widget _buildPendingLoanView() {
+    return RefreshIndicator(
+      onRefresh: _refreshAllData,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    const Icon(Icons.pending_actions, size: 60, color: Colors.orange),
+                    const SizedBox(height: 15),
+                    const Text(
+                      "Loan Pending Approval",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.orange),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Ksh ${_activeLoan?['amount']?.toString() ?? '0'}",
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.orange),
+                      ),
+                      child: Text(
+                        _activeLoan?['status']?.toString().toUpperCase() ?? 'PENDING',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _getStatusDescription(_activeLoan?['status'] ?? 'pending'),
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildLoanDetailCard(),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "We are processing your loan application. You will receive a notification once it's approved.",
+                      style: TextStyle(fontSize: 14, color: Colors.blue),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Repay loan view for approved/disbursed/active loans
+  Widget _buildRepayLoanView() {
     double amountRepaid = _calculateAmountRepaid();
     double progress = _calculateRepaymentProgress();
-
-    final status = _activeLoan?['status']?.toString() ?? 'pending';
+    final status = _activeLoan?['status']?.toString() ?? 'active';
     final shouldShowRepayButton = _shouldShowRepayButton();
-    final isFullyRepaid = status.toLowerCase() == 'repaid' || status.toLowerCase() == 'fully repaid';
 
     return RefreshIndicator(
       onRefresh: _refreshAllData,
@@ -1237,17 +1320,21 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     ),
                     const SizedBox(height: 10),
 
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        _waitingForPIN ? "AWAITING M-PESA PIN" : _getStatusDisplayText(status),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: _waitingForPIN ? Colors.orange : _getStatusColor(status),
-                        ),
-                        textAlign: TextAlign.center,
+                    Text(
+                      _waitingForPIN ? "AWAITING M-PESA PIN" : _getStatusDisplayText(status),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: _waitingForPIN ? Colors.orange : _getStatusColor(status),
                       ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    const SizedBox(height: 10),
+                    Text(
+                      _getStatusDescription(status),
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
                     ),
 
                     if (progress > 0 && progress < 100) ...[
@@ -1263,104 +1350,31 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       const SizedBox(height: 5),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text("Ksh ${amountRepaid.toStringAsFixed(0)} repaid of Ksh ${_activeLoan?['repayable_amount']?.toString() ?? '0'}",
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          textAlign: TextAlign.center,
-                        ),
+                      Text("Ksh ${amountRepaid.toStringAsFixed(0)} repaid of Ksh ${_activeLoan?['repayable_amount']?.toString() ?? '0'}",
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        textAlign: TextAlign.center,
                       ),
                     ],
 
                     if (_waitingForPIN) ...[
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange),
+                        ),
                         child: Text(
                           "STK Push sent to ${widget.userPhone}. Check your phone and enter your M-Pesa PIN",
                           style: const TextStyle(color: Colors.orange),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      const SizedBox(height: 5),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: const Text(
-                          "Data will update automatically when payment is confirmed...",
-                          style: TextStyle(fontSize: 12, color: Colors.blue),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
                     ],
 
-                    if (isFullyRepaid) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green),
-                          ),
-                          child: const Text(
-                            "Loan fully repaid! You can apply for a new loan.",
-                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    if (status.toLowerCase() == 'pending') ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange),
-                          ),
-                          child: const Text(
-                            "Your loan is pending approval. You can repay if needed.",
-                            style: TextStyle(color: Colors.orange),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 15),
-
-                    _buildLoanDetailRow("Loan Amount", "Ksh ${_activeLoan?['amount']?.toString() ?? '0'}"),
-
-                    if (!isFullyRepaid)
-                      _buildLoanDetailRow("Outstanding Balance", "Ksh ${_activeLoan?['balance']?.toString() ?? '0'}"),
-
-                    if (amountRepaid > 0)
-                      _buildLoanDetailRow("Amount Repaid", "Ksh ${amountRepaid.toStringAsFixed(0)}"),
-
-                    _buildLoanDetailRow("Total Repayable", "Ksh ${_activeLoan?['repayable_amount']?.toString() ?? '0'}"),
-
-                    _buildLoanDetailRow("Registered Phone", widget.userPhone),
-
-                    if (_activeLoan?['due_date'] != null)
-                      _buildLoanDetailRow("Due Date", _formatDate(_activeLoan!['due_date'])),
-
-                    if (daysRemaining > 0 && !isFullyRepaid)
-                      _buildLoanDetailRow("Days Remaining", "$daysRemaining days"),
-
-                    if (_activeLoan?['tenure_days'] != null)
-                      _buildLoanDetailRow("Loan Term", "${_activeLoan!['tenure_days']} days"),
-
-                    if (_activeLoan?['transaction_id'] != null)
-                      _buildLoanDetailRow("Transaction ID", _activeLoan!['transaction_id']),
-
-                    if (_activeLoan?['id'] != null)
-                      _buildLoanDetailRow("Loan ID", _activeLoan!['id'].toString()),
+                    const SizedBox(height: 20),
+                    _buildLoanDetailCard(),
 
                     const SizedBox(height: 20),
 
@@ -1398,37 +1412,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                               Icon(Icons.payment, color: Colors.white),
                               SizedBox(width: 8),
                               Text(
-                                "Repay Loan",
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                    if (isFullyRepaid)
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              _hasPendingLoan = false;
-                              _activeLoan = null;
-                              _assessmentData = null;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text(
-                                "Apply for New Loan",
+                                "Repay Loan Now",
                                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -1439,6 +1423,125 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Fully repaid loan view
+  Widget _buildFullyRepaidView() {
+    return RefreshIndicator(
+      onRefresh: _refreshAllData,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  children: [
+                    const Icon(Icons.check_circle, size: 60, color: Colors.green),
+                    const SizedBox(height: 15),
+                    const Text(
+                      "Loan Fully Repaid!",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.green),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Ksh ${_activeLoan?['amount']?.toString() ?? '0'}",
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: const Text(
+                        "FULLY REPAID",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Congratulations! You have successfully repaid your loan.",
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildLoanDetailCard(),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _hasPendingLoan = false;
+                            _activeLoan = null;
+                            _assessmentData = null;
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add, color: Colors.white),
+                            SizedBox(width: 8),
+                            Text(
+                              "Apply for New Loan",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Reusable loan detail card
+  Widget _buildLoanDetailCard() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            const Text(
+              "Loan Details",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            _buildLoanDetailRow("Loan Amount", "Ksh ${_activeLoan?['amount']?.toString() ?? '0'}"),
+            _buildLoanDetailRow("Outstanding Balance", "Ksh ${_activeLoan?['balance']?.toString() ?? '0'}"),
+            _buildLoanDetailRow("Total Repayable", "Ksh ${_activeLoan?['repayable_amount']?.toString() ?? '0'}"),
+            if (_activeLoan?['due_date'] != null)
+              _buildLoanDetailRow("Due Date", _formatDate(_activeLoan!['due_date'])),
+            if (_activeLoan?['tenure_days'] != null)
+              _buildLoanDetailRow("Loan Term", "${_activeLoan!['tenure_days']} days"),
+            if (_activeLoan?['id'] != null)
+              _buildLoanDetailRow("Loan ID", _activeLoan!['id'].toString()),
           ],
         ),
       ),
@@ -1492,7 +1595,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       drawer: _buildDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _hasPendingLoan ? _buildActiveLoanView() : _buildLoanRequestView(),
+          : _hasPendingLoan ? _buildStatusBasedView() : _buildLoanRequestView(),
     );
   }
 }
