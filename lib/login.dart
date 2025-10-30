@@ -55,7 +55,7 @@ class _LoginState extends State<Login> {
       child: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/background.jpg'),
+            image: AssetImage('assets/images/app_logo.jpeg'),
             fit: BoxFit.cover,
             colorFilter: ColorFilter.mode(
               Colors.black54,
