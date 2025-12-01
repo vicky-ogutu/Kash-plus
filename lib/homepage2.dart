@@ -67,9 +67,17 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       print('📱 Phone: ${_user.phone}');
       print('💰 Loan Status: ${_user.status}');
       print('💳 Loan Balance: ${_user.loanBalance}');
+      print('📊 Is New User: ${_user.isNewUser}');
+      print('🔑 Loan ID: ${_user.loanId}');
 
-      // Auto-check eligibility if user can apply for loan
-      if (_user.canApplyForLoan) {
+      // For new users, provide default assessment immediately
+      if (_user.isNewUser) {
+        print('👶 New user detected - providing default assessment');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _provideDefaultAssessmentForNewUser();
+        });
+      } else if (_user.canApplyForLoan) {
+        // For existing users without active loan, check eligibility
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _checkEligibility();
         });
@@ -78,6 +86,30 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       print('❌ Error initializing app: $e');
       _errorMessage = 'Failed to initialize app: $e';
     }
+  }
+
+  void _provideDefaultAssessmentForNewUser() {
+    if (mounted) {
+      setState(() {
+        _assessment = LoanAssessment.defaultForNewUser();
+        _selectedLoanAmount = _assessment!.eligibleAmount;
+      });
+    }
+    _showWelcomeMessage();
+  }
+
+  void _showWelcomeMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          '👋 Welcome to SureCash! You can start with a starter loan.',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.blue,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   Future<void> _checkEligibility() async {
@@ -107,26 +139,58 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       if (response['assessment'] != null) {
         final assessment = LoanAssessment.fromJson(response['assessment']);
 
+        // If eligible amount is 0 or negative, provide minimum loan for new users
+        if (assessment.eligibleAmount <= 0 && _user.isNewUser) {
+          print('⚠️ Zero eligibility for new user - providing default');
+          _assessment = LoanAssessment.defaultForNewUser();
+        } else {
+          _assessment = assessment;
+        }
+
         if (mounted) {
           setState(() {
-            _assessment = assessment;
-            _selectedLoanAmount = assessment.eligibleAmount;
+            _selectedLoanAmount = _assessment!.eligibleAmount;
           });
         }
 
-        _showAssessmentSuccess(assessment);
+        _showAssessmentSuccess(_assessment!);
       } else {
-        throw Exception('No assessment data in response');
+        // No assessment data - provide default for new users
+        if (_user.isNewUser) {
+          print('⚠️ No assessment data for new user - providing default');
+          if (mounted) {
+            setState(() {
+              _assessment = LoanAssessment.defaultForNewUser();
+              _selectedLoanAmount = _assessment!.eligibleAmount;
+            });
+          }
+          _showAssessmentSuccess(_assessment!);
+        } else {
+          throw Exception('No assessment data in response');
+        }
       }
     } catch (e) {
       print('❌ Eligibility check error: $e');
       final errorMsg = e.toString();
-      if (mounted) {
-        setState(() {
-          _errorMessage = errorMsg;
-        });
+
+      // For new users, provide default assessment even if API fails
+      if (_user.isNewUser) {
+        print('🔄 Providing default assessment for new user after API error');
+        if (mounted) {
+          setState(() {
+            _assessment = LoanAssessment.defaultForNewUser();
+            _selectedLoanAmount = _assessment!.eligibleAmount;
+            _errorMessage = null;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _errorMessage = errorMsg;
+          });
+        }
+        _showErrorSnackBar('Failed to check eligibility: $errorMsg');
       }
-      _showErrorSnackBar('Failed to check eligibility: $errorMsg');
     } finally {
       if (mounted) {
         setState(() {
@@ -140,7 +204,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          '✅ Credit assessment complete! Eligible: Ksh ${assessment.eligibleAmount.toInt()}',
+          '✅ ${_user.isNewUser ? 'Welcome!' : 'Credit assessment complete!'} Eligible: Ksh ${assessment.eligibleAmount.toInt()}',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.green,
@@ -161,15 +225,22 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     }
 
     try {
-      final applicationData = {
-        "amount": _selectedLoanAmount.toStringAsFixed(0),
-        "repayable_amount": _calculateTotalRepayable().toStringAsFixed(0),
-        "tenure_days": _assessment!.tenureDays,
-        "repayment_due_date": _assessment!.repaymentDueDate,
-      };
+      final interestFee = _calculateInterestFee();
+      final totalRepayable = _calculateTotalRepayable();
 
       print('📤 Applying for loan for user: ${_user.id}');
-      final response = await _apiService.applyForLoan(applicationData);
+      print('💰 Selected Amount: $_selectedLoanAmount');
+      print('💰 Interest Fee: $interestFee');
+      print('💰 Total Repayable: $totalRepayable');
+      print('📅 Due Date: ${_assessment!.repaymentDueDate}');
+
+      final response = await _apiService.applyForLoan(
+        amount: _selectedLoanAmount,
+        interestFee: interestFee,
+        repayableAmount: totalRepayable,
+        tenureDays: _assessment!.tenureDays,
+        repaymentDueDate: _assessment!.repaymentDueDate,
+      );
 
       if (response['success'] != null && !response['success']) {
         throw Exception(response['message'] ?? 'Loan application failed');
@@ -185,8 +256,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
             phone: _user.phone,
             loanId: response['loan_id']?.toString() ?? _user.loanId,
             loanAmount: _selectedLoanAmount.toStringAsFixed(0),
-            loanBalance: _calculateTotalRepayable().toStringAsFixed(0),
-            repayableAmount: _calculateTotalRepayable().toStringAsFixed(0),
+            loanBalance: totalRepayable.toStringAsFixed(0),
+            repayableAmount: totalRepayable.toStringAsFixed(0),
             status: 'pending',
             loanStatus: 'pending',
           );
@@ -213,8 +284,18 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
   }
 
   Future<void> _repayLoan() async {
+    // Check if we have a valid loan ID
+    final loanId = _user.loanId;
+    if (loanId == null || loanId == "null" || loanId.isEmpty) {
+      _showErrorSnackBar('Loan ID is missing. Cannot process payment.');
+      return;
+    }
+
     final balance = double.tryParse(_user.loanBalance) ?? 0;
-    if (balance <= 0) return;
+    if (balance <= 0) {
+      _showErrorSnackBar('No outstanding balance to repay.');
+      return;
+    }
 
     if (mounted) {
       setState(() {
@@ -224,16 +305,19 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     }
 
     try {
-      final repaymentData = {
-        "amount": balance.toStringAsFixed(0),
-        "repayable_amount": _user.repayableAmount,
-        "tenure_days": 90, // Default value
-        "repayment_due_date": DateTime.now().add(const Duration(days: 90)).toString().split(' ')[0],
-        "phone_number": _formatPhoneForMPesa(_user.phone),
-      };
+      // Get formatted phone number for M-Pesa
+      final phoneNumber = _formatPhoneForMPesa(_user.phone);
 
-      print('💰 Processing repayment for user: ${_user.id}');
-      final response = await _apiService.repayLoan(repaymentData);
+      print('💰 Processing repayment');
+      print('📱 Phone: $phoneNumber');
+      print('💳 Loan ID: $loanId');
+      print('💰 Amount: $balance');
+
+      final response = await _apiService.repayLoan(
+        loanId: loanId,
+        amount: balance,
+        phoneNumber: phoneNumber,
+      );
 
       if (response['success'] != null && !response['success']) {
         throw Exception(response['message'] ?? 'Repayment failed');
@@ -421,16 +505,19 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
           // Handle the case where maxAmount < minAmount
           final bool canShowSlider = maxAmount >= minAmount;
           final double sliderValue = _selectedLoanAmount.clamp(
-              canShowSlider ? minAmount : 0.0,
-              maxAmount
+            canShowSlider ? minAmount : 0.0,
+            maxAmount,
           );
 
           return AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.assessment, color: Colors.green),
-                SizedBox(width: 10),
-                Text('Loan Application'),
+                Icon(
+                  _user.isNewUser ? Icons.emoji_people : Icons.assessment,
+                  color: _user.isNewUser ? Colors.blue : Colors.green,
+                ),
+                const SizedBox(width: 10),
+                Text(_user.isNewUser ? 'Welcome! Apply for Starter Loan' : 'Loan Application'),
               ],
             ),
             content: SingleChildScrollView(
@@ -438,6 +525,31 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_user.isNewUser)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info, color: Colors.blue, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Welcome! Start with a small loan to build your credit history.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.blue[800],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   const Text(
                     'Review your loan details before applying:',
                     style: TextStyle(fontSize: 16),
@@ -538,11 +650,13 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: _selectedLoanAmount >= 100 ? () {
+                onPressed: _selectedLoanAmount >= 100
+                    ? () {
                   Navigator.pop(context);
                   _applyForLoan();
-                } : null,
-                child: const Text('Apply Now'),
+                }
+                    : null,
+                child: Text(_user.isNewUser ? 'Get Starter Loan' : 'Apply Now'),
               ),
             ],
           );
@@ -596,15 +710,15 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 20),
-          const Text(
-            'Checking credit score...',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+          Text(
+            _user.isNewUser ? 'Setting up your account...' : 'Checking credit score...',
+            style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Please wait while we assess your eligibility',
+          Text(
+            _user.isNewUser ? 'Welcome to SureCash! Preparing your starter loan...' : 'Please wait while we assess your eligibility',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: Colors.grey),
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 20),
@@ -632,6 +746,10 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     final totalAmount = double.tryParse(_user.repayableAmount) ?? 0;
     final amountRepaid = totalAmount - balance;
     final progress = totalAmount > 0 ? (amountRepaid / totalAmount) * 100 : 0;
+
+    // Check if status is "disbursed" (case insensitive)
+    final isDisbursed = _user.status.toLowerCase().contains('disbursed');
+    final shouldShowRepayButton = isDisbursed && balance > 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -707,7 +825,8 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     const SizedBox(height: 16),
                   ],
 
-                  if (_user.hasActiveLoan && balance > 0)
+                  // Only show repay button if status is "disbursed" and balance > 0
+                  if (shouldShowRepayButton)
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -734,6 +853,23 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                             Text('Repay Loan Now', style: TextStyle(fontSize: 16)),
                           ],
                         ),
+                      ),
+                    ),
+
+                  // Show message if pending
+                  if (_user.status.toLowerCase().contains('pending'))
+                    Container(
+                      margin: const EdgeInsets.only(top: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange),
+                      ),
+                      child: const Text(
+                        'Your loan is pending approval. Once disbursed, you can repay it here.',
+                        style: TextStyle(color: Colors.orange),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                 ],
@@ -784,18 +920,32 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
               child: Column(
                 children: [
                   Icon(
-                    _assessment != null ? Icons.verified_user : Icons.assessment,
+                    _user.isNewUser
+                        ? Icons.emoji_people
+                        : _assessment != null
+                        ? Icons.verified_user
+                        : Icons.assessment,
                     size: 60,
-                    color: _assessment != null ? Colors.green : Colors.blueAccent,
+                    color: _user.isNewUser
+                        ? Colors.blue
+                        : _assessment != null
+                        ? Colors.green
+                        : Colors.blueAccent,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _assessment != null ? 'Loan Available!' : 'Check Your Eligibility',
+                    _user.isNewUser
+                        ? 'Welcome to SureCash!'
+                        : _assessment != null
+                        ? 'Loan Available!'
+                        : 'Check Your Eligibility',
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _assessment != null
+                    _user.isNewUser
+                        ? 'Start your journey with a small starter loan'
+                        : _assessment != null
                         ? 'You are eligible for a loan up to Ksh ${_assessment!.eligibleAmount.toInt()}'
                         : 'Check if you qualify for a loan and see your credit limit',
                     style: const TextStyle(fontSize: 16, color: Colors.grey),
@@ -815,9 +965,9 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  const Text(
-                    'Loan Eligibility',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  Text(
+                    _user.isNewUser ? 'Starter Loan' : 'Loan Eligibility',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Container(
@@ -834,14 +984,16 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                     ),
                     child: Column(
                       children: [
-                        const Text(
-                          'Maximum Eligible Amount',
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        Text(
+                          _user.isNewUser ? 'Starter Loan Amount' : 'Maximum Eligible Amount',
+                          style: const TextStyle(fontSize: 14, color: Colors.grey),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _assessment != null
                               ? 'Ksh ${_assessment!.eligibleAmount.toInt()}'
+                              : _user.isNewUser
+                              ? 'Ksh 100'
                               : 'Check Now',
                           style: TextStyle(
                             fontSize: 28,
@@ -860,8 +1012,11 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _checkingCreditScore ? null :
-                      _assessment != null ? _showApplyLoanDialog : _checkEligibility,
+                      onPressed: _checkingCreditScore
+                          ? null
+                          : _assessment != null
+                          ? _showApplyLoanDialog
+                          : _checkEligibility,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _assessment != null ? Colors.green : Colors.blueAccent,
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -870,7 +1025,11 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
                       child: _checkingCreditScore
                           ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                           : Text(
-                        _assessment != null ? 'Apply for Loan' : 'Check Eligibility',
+                        _user.isNewUser
+                            ? 'Get Starter Loan'
+                            : _assessment != null
+                            ? 'Apply for Loan'
+                            : 'Check Eligibility',
                         style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -944,6 +1103,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       case 'approved':
         return Icons.thumb_up;
       case 'disbursed':
+        return Icons.money;
       case 'active':
         return Icons.money;
       case 'overdue':
@@ -963,6 +1123,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
       case 'approved':
         return Colors.blue;
       case 'disbursed':
+        return Colors.lightBlue;
       case 'active':
         return Colors.lightBlue;
       case 'overdue':
@@ -976,18 +1137,19 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
     switch (status.toLowerCase()) {
       case 'repaid':
       case 'fully repaid':
-        return 'Loan Fully Repaid';
+        return 'LOAN FULLY REPAID';
       case 'pending':
-        return 'Pending Approval';
+        return 'PENDING APPROVAL';
       case 'approved':
-        return 'Loan Approved';
+        return 'LOAN APPROVED';
       case 'disbursed':
+        return 'LOAN DISBURSED';
       case 'active':
-        return 'Active Loan';
+        return 'ACTIVE LOAN';
       case 'overdue':
-        return 'Payment Overdue';
+        return 'PAYMENT OVERDUE';
       default:
-        return status;
+        return status.toUpperCase();
     }
   }
 
@@ -1004,7 +1166,7 @@ class _LoanRequestScreenState extends State<LoanRequestScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _checkEligibility,
+            onPressed: _user.isNewUser ? null : _checkEligibility,
             tooltip: 'Refresh',
           ),
           IconButton(

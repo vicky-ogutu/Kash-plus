@@ -24,6 +24,7 @@ class _RegistrationState extends State<Registration> {
 
   bool _hidePassword = true; // Show/hide password toggle
 
+  // ======================= REGISTER USER FUNCTION =======================
   Future<void> registerUser() async {
     const String apiUrl = "https://api.surekash.co.ke/api/auth/register";
 
@@ -52,9 +53,26 @@ class _RegistrationState extends State<Registration> {
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text("Registration successful")));
-      } else {
+
+        // Navigate to Login screen after a short delay
+        Future.delayed(const Duration(seconds: 1), () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const Login()),
+          );
+        });
+      }
+      else if (response.statusCode >= 400 && response.statusCode < 500) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text("Error: ${response.body}")));
+      }
+      else if (response.statusCode >= 500) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Server error. Please try again later.')));
+      }
+      else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Unexpected error: ${response.body}")));
       }
     } catch (e) {
       ScaffoldMessenger.of(context)
@@ -315,3 +333,4 @@ class _RegistrationState extends State<Registration> {
     );
   }
 }
+
