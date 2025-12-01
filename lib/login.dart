@@ -97,7 +97,6 @@ class _LoginState extends State<Login> {
           ),
         ),
         const SizedBox(height: 12),
-
       ],
     );
   }
@@ -175,7 +174,7 @@ class _LoginState extends State<Login> {
       labelText: label,
       filled: true,
       fillColor: Colors.grey.shade50,
-      prefixIcon: Icon(icon, color: Color(0xFF005BE0)),
+      prefixIcon: Icon(icon, color: const Color(0xFF005BE0)),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -217,7 +216,8 @@ class _LoginState extends State<Login> {
           "Login",
           style: TextStyle(
             fontSize: 18,
-            fontWeight: FontWeight.w600, color: Colors.white
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
           ),
         ),
       ),
@@ -250,8 +250,9 @@ class _LoginState extends State<Login> {
                 TextSpan(
                   text: "Create Account",
                   style: TextStyle(
-                      color: Color(0xFF005BE0),
-                      fontWeight: FontWeight.w700),
+                    color: Color(0xFF005BE0),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -266,8 +267,7 @@ class _LoginState extends State<Login> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Reset Password"),
-        content: const Text(
-            "Please contact customer support to reset your password."),
+        content: const Text("Please contact customer support to reset your password."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -317,22 +317,29 @@ class _LoginState extends State<Login> {
       ),
     );
 
+    // Handle null values properly
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => LoanRequestScreen(
-          token: data['token'],
-          userID: data['user_id'].toString(),
-          loanAmount: data['loan_amount'].toString(),
-          repayableAmount: data['repayable_amount'].toString(),
-          status: data['status'],
-          loanStatus: data['loan_status'],
-          userPhone: data['phone'],
-          loanId: data['loan_id'].toString(),
-          loanBalance: data['loan_balance'].toString(),
+          token: data['token']?.toString() ?? '',
+          userID: data['user_id']?.toString() ?? '0',
+          loanAmount: _parseString(data['loan_amount']),
+          repayableAmount: _parseString(data['repayable_amount']),
+          status: _parseString(data['status']),
+          loanStatus: data['loan_status']?.toString(),
+          userPhone: data['phone']?.toString() ?? '',
+          loanId: data['loan_id']?.toString(),
+          loanBalance: _parseString(data['loan_balance']),
         ),
       ),
     );
+  }
+
+  String _parseString(dynamic value) {
+    if (value == null) return '0';
+    if (value == 'null') return '0';
+    return value.toString();
   }
 
   void _onError(String body) {

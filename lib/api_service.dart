@@ -64,11 +64,24 @@ class ApiService {
     );
   }
 
-  // Apply for loan - POST request
-  Future<Map<String, dynamic>> applyForLoan(Map<String, dynamic> data) async {
-    // Ensure userId is included in the request
-    final requestData = Map<String, dynamic>.from(data);
-    requestData['userId'] = int.tryParse(userId) ?? 0;
+  // Apply for loan - POST request (Correct format)
+  Future<Map<String, dynamic>> applyForLoan({
+    required double amount,
+    required double interestFee,
+    required double repayableAmount,
+    required int tenureDays,
+    required String repaymentDueDate,
+  }) async {
+    // Correct request format for apply API
+    final requestData = {
+      "userId": int.tryParse(userId) ?? 0,
+      "amount": amount.toInt(),
+      "interest_fee": interestFee.toStringAsFixed(0),
+      "repayable_amount": repayableAmount.toStringAsFixed(0),
+      "tenure_days": tenureDays,
+      "repayment_due_date": repaymentDueDate,
+    };
+
 
     print('📤 Applying for loan with data: $requestData');
 
@@ -81,13 +94,22 @@ class ApiService {
     );
   }
 
-  // Repay loan - POST request
-  Future<Map<String, dynamic>> repayLoan(Map<String, dynamic> data) async {
-    // Ensure userId is included in the request
-    final requestData = Map<String, dynamic>.from(data);
-    requestData['userId'] = int.tryParse(userId) ?? 0;
+  // Repay loan - POST request (Correct format)
+  Future<Map<String, dynamic>> repayLoan({
+    required String loanId,
+    required double amount,
+    required String phoneNumber,
+  }) async {
+    // Correct request format for repay API
+    final requestData = {
+      "loan_id": int.tryParse(loanId) ?? 0,
+      "amount": amount.toInt(),
+      "phone_number": phoneNumber,
+    };
 
     print('💰 Processing repayment with data: $requestData');
+    print('💰 Phone number being sent: $phoneNumber');
+    print('💰 Loan ID being sent: $loanId');
 
     return await _handleRequest(
       http.post(
