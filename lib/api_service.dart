@@ -21,41 +21,56 @@ class ApiService {
     try {
       final response = await request.timeout(const Duration(seconds: 30));
 
+      print('📊 API Response Status: ${response.statusCode}');
+      print('📊 API Response Body: ${response.body}');
+
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        try {
+          return jsonDecode(response.body);
+        } on FormatException {
+          throw Exception('Invalid JSON response from server');
+        }
       } else if (response.statusCode == 401) {
         throw Exception('Session expired. Please login again.');
       } else if (response.statusCode >= 500) {
         throw Exception('Server error. Please try again later.');
       } else {
-        final errorData = jsonDecode(response.body);
-        throw Exception(errorData['message'] ?? 'Request failed with status ${response.statusCode}');
+        try {
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['message'] ?? 'Request failed with status ${response.statusCode}');
+        } catch (e) {
+          throw Exception('Request failed with status ${response.statusCode}');
+        }
       }
     } on TimeoutException {
       throw Exception('Request timeout. Please check your connection.');
-    } on FormatException {
-      throw Exception('Invalid response from server.');
     } catch (e) {
       throw Exception('Network error: ${e.toString()}');
     }
   }
 
-  // Assessment API - Now uses dynamic userId
+  // Assessment API - GET request with userId as query parameter
   Future<Map<String, dynamic>> checkEligibility() async {
+    final url = Uri.parse('$baseUrl/loan/assessment').replace(
+      queryParameters: {'userId': userId},
+    );
+
+    print('🔍 Checking eligibility at URL: $url');
+    print('🔍 Token: ${token.substring(0, 20)}...');
+    print('🔍 User ID: $userId');
+
     return await _handleRequest(
-      http.post(
-        Uri.parse('$baseUrl/loan/assessment'),
-        headers: _headers,
-        body: jsonEncode({'userId': int.tryParse(userId) ?? 0}),
-      ),
+      http.get(url, headers: _headers),
     );
   }
 
-  // Apply for loan - Now uses dynamic userId
+  // Apply for loan - POST request
   Future<Map<String, dynamic>> applyForLoan(Map<String, dynamic> data) async {
     // Ensure userId is included in the request
     final requestData = Map<String, dynamic>.from(data);
     requestData['userId'] = int.tryParse(userId) ?? 0;
+
+    print('📤 Applying for loan with data: $requestData');
 
     return await _handleRequest(
       http.post(
@@ -66,11 +81,13 @@ class ApiService {
     );
   }
 
-  // Repay loan - Now uses dynamic userId
+  // Repay loan - POST request
   Future<Map<String, dynamic>> repayLoan(Map<String, dynamic> data) async {
     // Ensure userId is included in the request
     final requestData = Map<String, dynamic>.from(data);
     requestData['userId'] = int.tryParse(userId) ?? 0;
+
+    print('💰 Processing repayment with data: $requestData');
 
     return await _handleRequest(
       http.post(
