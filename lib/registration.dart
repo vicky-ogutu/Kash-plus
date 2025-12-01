@@ -22,6 +22,8 @@ class _RegistrationState extends State<Registration> {
 
   final FlutterContactPicker _contactPicker = FlutterContactPicker();
 
+  bool _hidePassword = true; // Show/hide password toggle
+
   Future<void> registerUser() async {
     const String apiUrl = "https://api.surekash.co.ke/api/auth/register";
 
@@ -51,8 +53,8 @@ class _RegistrationState extends State<Registration> {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text("Registration successful")));
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Error: ${response.body}")));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: ${response.body}")));
       }
     } catch (e) {
       ScaffoldMessenger.of(context)
@@ -60,12 +62,30 @@ class _RegistrationState extends State<Registration> {
     }
   }
 
-  // ⬇⬇⬇ UPDATED INPUT BUILDER WITH RED ASTERISK ⬇⬇⬇
+  // ======================= INPUT FIELD WITH ICONS + PASSWORD TOGGLE =======================
   Widget _input({
     required String label,
     required TextEditingController controller,
     bool isPassword = false,
   }) {
+    IconData _getIcon() {
+      switch (label.toLowerCase()) {
+        case "first name":
+        case "last name":
+          return Icons.person_outline;
+        case "email address":
+          return Icons.email_outlined;
+        case "phone number":
+          return Icons.phone_android_outlined;
+        case "national id":
+          return Icons.badge_outlined;
+        case "password":
+          return Icons.lock_outline;
+        default:
+          return Icons.text_fields;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -87,8 +107,35 @@ class _RegistrationState extends State<Registration> {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword ? _hidePassword : false,
+          keyboardType: label.toLowerCase() == "phone number"
+              ? TextInputType.phone
+              : TextInputType.text,
           decoration: InputDecoration(
+            hintText: label.toLowerCase() == "phone number"
+                ? "0700000000"
+                : null,
+            hintStyle: TextStyle(color: Colors.grey.shade500),
+
+            prefixIcon: Icon(_getIcon(), color: Colors.grey.shade700),
+
+            // Password toggle
+            suffixIcon: isPassword
+                ? IconButton(
+              icon: Icon(
+                _hidePassword
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                color: Colors.grey.shade700,
+              ),
+              onPressed: () {
+                setState(() {
+                  _hidePassword = !_hidePassword;
+                });
+              },
+            )
+                : null,
+
             contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             filled: true,
@@ -99,7 +146,8 @@ class _RegistrationState extends State<Registration> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: Color(0xFF005BE0), width: 1.5),
+              borderSide:
+              const BorderSide(color: Color(0xFF005BE0), width: 1.5),
             ),
           ),
         ),
@@ -107,6 +155,7 @@ class _RegistrationState extends State<Registration> {
     );
   }
 
+  // ======================= UI =======================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -116,27 +165,24 @@ class _RegistrationState extends State<Registration> {
           padding: const EdgeInsets.all(22),
           child: Column(
             children: [
-              // Branding Header
+              // ---------------- LOGO + HEADER ----------------
               Column(
                 children: [
                   Container(
-                    height: 65,
-                    width: 65,
+                    height: 100,
+                    width: 100,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF005BE0),
-                      borderRadius: BorderRadius.circular(18),
+                      shape: BoxShape.circle,
+                      color: Colors.blue.shade100,
                     ),
-                    child:
-                    const Icon(Icons.credit_score, color: Colors.white, size: 38),
+                    child: ClipOval(
+                      child: Image.asset(
+                        "assets/images/app_logo.png",
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  const Text("SureCash",
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF005BE0),
-                      )),
-                  const SizedBox(height: 4),
                   const Text(
                     "Fast • Secure • Reliable Loans",
                     style: TextStyle(color: Colors.black54),
@@ -146,7 +192,7 @@ class _RegistrationState extends State<Registration> {
 
               const SizedBox(height: 28),
 
-              // Card Container
+              // ---------------- FORM CARD ----------------
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -163,18 +209,17 @@ class _RegistrationState extends State<Registration> {
                 ),
                 child: Column(
                   children: [
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "Create Your Account",
-                        style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87),
+                    const Text(
+                      "Create Your Account",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF005BE0),
                       ),
                     ),
                     const SizedBox(height: 18),
 
+                    // FIRST + LAST NAME
                     Row(
                       children: [
                         Expanded(
@@ -190,13 +235,16 @@ class _RegistrationState extends State<Registration> {
                     ),
 
                     const SizedBox(height: 14),
-                    _input(label: "Email Address", controller: emailController),
+                    _input(
+                        label: "Email Address", controller: emailController),
 
                     const SizedBox(height: 14),
-                    _input(label: "Phone Number", controller: phoneController),
+                    _input(
+                        label: "Phone Number", controller: phoneController),
 
                     const SizedBox(height: 14),
-                    _input(label: "National ID", controller: idNumberController),
+                    _input(
+                        label: "National ID", controller: idNumberController),
 
                     const SizedBox(height: 14),
                     _input(
@@ -206,6 +254,7 @@ class _RegistrationState extends State<Registration> {
 
                     const SizedBox(height: 22),
 
+                    // SUBMIT BUTTON
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -220,7 +269,10 @@ class _RegistrationState extends State<Registration> {
                         child: const Text(
                           "Create Account",
                           style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -230,6 +282,7 @@ class _RegistrationState extends State<Registration> {
 
               const SizedBox(height: 24),
 
+              // ---------------- LOGIN REDIRECT ----------------
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -238,12 +291,11 @@ class _RegistrationState extends State<Registration> {
                     style: TextStyle(color: Colors.black87),
                   ),
                   const SizedBox(width: 6),
-
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => Login()),
+                        MaterialPageRoute(builder: (context) => const Login()),
                       );
                     },
                     child: const Text(
@@ -256,7 +308,6 @@ class _RegistrationState extends State<Registration> {
                   ),
                 ],
               )
-
             ],
           ),
         ),
